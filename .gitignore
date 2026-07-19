@@ -1,0 +1,57 @@
+ 
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+**/bin/
+**/obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+
+# Visual Studio Code
+.vscode/
+
+# User-specific files
+*.rsuser
+*.log
+*.cache
+*.pidb
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Docker
+*.tar
+*.pid
+
+# MacOS
+.DS_Store
+
+# Linux
+*.pid
+*.sock
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Node.js (если есть)
+node_modules/
+npm-debug.log
+ 

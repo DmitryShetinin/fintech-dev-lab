@@ -1,0 +1,77 @@
+using Core.Enums;
+
+namespace Core.Models
+{
+  public class Operation
+  {
+    public Guid Id { get; private set; }
+
+    public string OperationId { get; private set; }
+
+    public decimal Amount { get; private set; }
+
+    public string Currency { get; private set; }
+
+    public string Description { get; private set; }
+
+    public OperationStatus Status { get; private set; }
+
+    public string? ProviderPaymentId { get; private set; }
+
+
+    private Operation()
+    {
+    }
+
+    private Operation(
+        string operationId,
+        decimal amount,
+        string currency,
+        string description)
+    {
+      Id = Guid.NewGuid();
+
+      OperationId = operationId;
+      Amount = amount;
+      Currency = currency;
+      Description = description;
+
+      Status = OperationStatus.Created;
+    }
+
+
+    public static Operation Create(
+        string operationId,
+        decimal amount,
+        string currency,
+        string description)
+    {
+      return new Operation(
+          operationId,
+          amount,
+          currency,
+          description);
+    }
+
+
+    public OperationEvent MoveTo(
+    OperationStatus next,
+    OperationStateMachine stateMachine)
+    {
+      stateMachine.Validate(Status, next);
+
+      var previous = Status;
+
+      Status = next;
+
+      return OperationEvent.Create(
+          Id,
+          previous,
+          next,
+          $"Operation moved {previous} -> {next}");
+    }
+
+
+
+  }
+}
