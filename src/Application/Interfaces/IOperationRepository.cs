@@ -19,6 +19,12 @@ public interface IOperationRepository
       Operation operation,
       CancellationToken cancellationToken);
 
+
+  Task AddEventAsync(
+        OperationEvent operationEvent,
+        CancellationToken cancellationToken);
+
+
   Task<bool> ExistsAsync(
       string operationId,
       CancellationToken cancellationToken);

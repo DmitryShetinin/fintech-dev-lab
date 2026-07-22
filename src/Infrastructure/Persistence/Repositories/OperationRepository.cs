@@ -15,7 +15,15 @@ public sealed class OperationRepository : IOperationRepository
     _dbContext = dbContext;
   }
 
-
+  public async Task AddEventAsync(
+      OperationEvent operationEvent,
+      CancellationToken cancellationToken)
+  {
+    await _dbContext.OperationEvents
+        .AddAsync(
+            operationEvent,
+            cancellationToken);
+  }
   public async Task AddAsync(
       Operation operation,
       CancellationToken cancellationToken)
