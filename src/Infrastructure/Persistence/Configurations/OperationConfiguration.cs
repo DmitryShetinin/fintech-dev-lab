@@ -1,48 +1,52 @@
-﻿using Domain.Entities;
+﻿using Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace MasterDataService.Infrastructure.Configurations
+namespace Infrastructure.Configurations;
+
+public sealed class OperationConfiguration : IEntityTypeConfiguration<Operation>
 {
-    public class PlantConfiguration : IEntityTypeConfiguration<Plant>
-    {
-        public void Configure(EntityTypeBuilder<Plant> builder)
-        {
-            // 1. Таблица
-            builder.ToTable("Plants");
+  public void Configure(EntityTypeBuilder<Operation> builder)
+  {
+    builder.ToTable("Operations");
 
-            // 2. Первичный ключ
-            builder.HasKey(p => p.Id);
+    // Primary Key
+    builder.HasKey(x => x.OperationId);
 
-            // 3. Свойства
-            builder.Property(p => p.Id)
-                .HasColumnName("Id")
-                .ValueGeneratedOnAdd();
+    // Properties
+    builder.Property(x => x.OperationId)
+        .HasMaxLength(100)
+        .IsRequired();
 
-            builder.Property(p => p.Name)
-                .HasColumnName("Name")
-                .IsRequired()
-                .HasMaxLength(100);
+    builder.Property(x => x.Amount)
+        .HasPrecision(18, 2)
+        .IsRequired();
 
-            builder.Property(p => p.Code)
-                .HasColumnName("Code")
-                .IsRequired()
-                .HasMaxLength(50);
+    builder.Property(x => x.Currency)
+        .HasMaxLength(3)
+        .IsRequired();
 
-            // 4. Связь с Equipments (Один ко многим)
-            builder.HasMany(p => p.Equipments)
-                .WithOne(e => e.Plant)
-                .HasForeignKey(e => e.PlantId)
-                .OnDelete(DeleteBehavior.Restrict); // Чтобы при удалении Plant не удалялись Equipment
+    builder.Property(x => x.Description)
+        .HasMaxLength(500);
 
-            // 5. Уникальный индекс для Code
-            builder.HasIndex(p => p.Code)
-                .IsUnique()
-                .HasDatabaseName("IX_Plants_Code_Unique");
+    builder.Property(x => x.Status)
+        .HasConversion<string>()
+        .HasMaxLength(20)
+        .IsRequired();
 
-            // 6. Индекс для поиска по Name (опционально)
-            builder.HasIndex(p => p.Name)
-                .HasDatabaseName("IX_Plants_Name");
-        }
-    }
+    builder.Property(x => x.ProviderPaymentId)
+        .HasMaxLength(100);
+
+    // Indexes
+    builder.HasIndex(x => x.Status);
+
+    builder.HasIndex(x => x.ProviderPaymentId)
+        .IsUnique(false);
+
+    // Relationships
+    builder.HasMany(x => x.Events)
+        .WithOne()
+        .HasForeignKey(x => x.OperationId)
+        .OnDelete(DeleteBehavior.Cascade);
+  }
 }
