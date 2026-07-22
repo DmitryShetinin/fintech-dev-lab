@@ -1,23 +1,22 @@
+
+
+
+
+using Core.Enums;
+
 namespace Application.Operations.Responses;
 
-
-
-public sealed class ReceiptRequest
+public sealed class OperationResponse
 {
-    public required string ProviderPaymentId { get; init; }
+  public string OperationId { get; init; } = default!;
 
-    public required string OperationId { get; init; }
+  public decimal Amount { get; init; }
 
-    public required ReceiptResult Result { get; init; }
+  public string Currency { get; init; } = default!;
 
-    public string? Message { get; init; }
+  public string Description { get; init; } = default!;
 
-    public DateTime OccurredAt { get; init; }
-}
+  public OperationStatus Status { get; init; }
 
-
-public enum ReceiptResult
-{
-    COMPLETED,
-    REJECTED
+  public string? ProviderPaymentId { get; init; }
 }

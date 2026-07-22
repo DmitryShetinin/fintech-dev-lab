@@ -6,12 +6,11 @@ namespace Core.Models
   {
     public long EventId { get; private set; }
 
-    public Guid OperationId { get; private set; }
+    public string OperationId { get; private set; }
 
     public OperationStatus? FromStatus { get; private set; }
 
     public OperationStatus ToStatus { get; private set; }
-
     public string Type { get; private set; }
 
     public string Message { get; private set; }
@@ -25,7 +24,7 @@ namespace Core.Models
 
 
     private OperationEvent(
-        Guid operationId,
+        string operationId,
         OperationStatus? fromStatus,
         OperationStatus toStatus,
         string type,
@@ -41,7 +40,7 @@ namespace Core.Models
 
 
     public static OperationEvent Create(
-        Guid operationId,
+        string operationId,
         OperationStatus? fromStatus,
         OperationStatus toStatus,
         string message)

@@ -1,6 +1,7 @@
 using Application.Interface;
 using Core.Models;
 
+
 namespace Application.Receipts;
 
 public sealed class OperationRepository : IOperationRepository

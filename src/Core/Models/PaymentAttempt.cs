@@ -4,7 +4,8 @@ public class PaymentAttempt
 {
   public Guid Id { get; set; }
 
-  public Guid OperationId { get; set; }
+  public string OperationId { get; set; }
+
 
   public int AttemptNumber { get; set; }
 
@@ -27,3 +28,5 @@ public enum AttemptStatus
 {
   FAILED, SUCCESS
 }
+
+
