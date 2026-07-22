@@ -1,3 +1,5 @@
+using Application.Common;
+using Application.Extensions;
 using Application.Interface;
 using Application.Interfaces;
 using Application.Operations.Requests;
@@ -25,9 +27,9 @@ public class OperationService : IOperationService
 
 
 
-  public async Task<OperationResponse> CreateAsync(
-      CreateOperationRequest request,
-      CancellationToken cancellationToken)
+  public async Task<Result<OperationResponse>> CreateAsync(
+     CreateOperationRequest request,
+     CancellationToken cancellationToken)
   {
     var exists = await _repository.ExistsAsync(
         request.OperationId,
@@ -36,7 +38,7 @@ public class OperationService : IOperationService
 
     if (exists)
     {
-      throw new InvalidOperationException(
+      return Result<OperationResponse>.Failure(
           $"Operation {request.OperationId} already exists");
     }
 
@@ -48,21 +50,23 @@ public class OperationService : IOperationService
         request.Description);
 
 
+
     await _repository.AddAsync(
         operation,
         cancellationToken);
+
 
 
     await _unitOfWork.SaveChangesAsync(
         cancellationToken);
 
 
-    return MapToResponse(operation);
+
+    return Result<OperationResponse>.Success(
+        operation.ToResponse());
   }
 
-
-
-  public async Task<OperationResponse> GetAsync(
+  public async Task<Result<OperationResponse>> GetAsync(
       string operationId,
       CancellationToken cancellationToken)
   {
@@ -73,18 +77,18 @@ public class OperationService : IOperationService
 
     if (operation is null)
     {
-      throw new KeyNotFoundException(
-          $"Operation {operationId} not found");
+      return Result<OperationResponse>.Failure(
+          "Operation not found");
     }
 
 
-    return MapToResponse(operation);
+    return Result<OperationResponse>.Success(
+        operation.ToResponse());
   }
 
 
 
-
-  public async Task<IReadOnlyList<OperationEventResponse>> GetEventsAsync(
+  public async Task<Result<IReadOnlyList<OperationEventResponse>>> GetEventsAsync(
       string operationId,
       CancellationToken cancellationToken)
   {
@@ -95,7 +99,7 @@ public class OperationService : IOperationService
 
     if (operation is null)
     {
-      throw new KeyNotFoundException(
+      return Result<IReadOnlyList<OperationEventResponse>>.Failure(
           $"Operation {operationId} not found");
     }
 
@@ -105,24 +109,19 @@ public class OperationService : IOperationService
         cancellationToken);
 
 
-
-    return events
-        .Select(x => new OperationEventResponse
-        {
-          EventId = x.EventId,
-          Type = x.ToStatus,
-          FromStatus = x.FromStatus,
-          ToStatus = x.ToStatus,
-          Message = x.Message,
-          OccurredAt = x.OccurredAt
-        })
+    var response = events
+        .Select(x => x.ToResponse())
         .ToList();
+
+
+    return Result<IReadOnlyList<OperationEventResponse>>.Success(
+        response);
   }
 
 
 
 
-  public async Task<SubmitOperationResponse> SubmitAsync(
+  public async Task<Result<SubmitOperationResponse>> SubmitAsync(
       string operationId,
       CancellationToken cancellationToken)
   {
@@ -133,24 +132,28 @@ public class OperationService : IOperationService
 
     if (operation is null)
     {
-      throw new KeyNotFoundException(
+      return Result<SubmitOperationResponse>.Failure(
           $"Operation {operationId} not found");
     }
 
 
 
-    // Повторный submit
-    // CREATED -> надо запускать workflow
-    // PROCESSING/COMPLETED/REJECTED -> просто вернуть состояние
+    /*
+        Повторный submit:
+
+        PROCESSING
+        COMPLETED
+        REJECTED
+
+        ничего не создаем
+        просто возвращаем состояние
+    */
+
 
     if (operation.Status != OperationStatus.Created)
     {
-      return new SubmitOperationResponse
-      {
-        OperationId = operation.OperationId,
-        Status = operation.Status,
-        ProviderPaymentId = operation.ProviderPaymentId
-      };
+      return Result<SubmitOperationResponse>.Success(
+          operation.ToSubmitResponse());
     }
 
 
@@ -158,45 +161,46 @@ public class OperationService : IOperationService
     /*
         Здесь позже будет:
 
-        await _submissionWorkflow.SubmitAsync(
-            operation,
-            cancellationToken);
+        _submissionWorkflow.SubmitAsync(operation)
 
+        который:
 
-        Workflow сделает:
-
-        1. Создать PaymentAttempt
-        2. Operation.MoveTo(PROCESSING)
-        3. Создать OperationEvent
+        1. создаст PaymentAttempt
+        2. сделает MoveTo(PROCESSING)
+        3. создаст OperationEvent
         4. SaveChanges()
-        5. Отправить провайдеру
-
+        5. отправит провайдеру
     */
 
 
+    var stateMachine = new OperationStateMachine();
 
-    return new SubmitOperationResponse
-    {
-      OperationId = operation.OperationId,
-      Status = operation.Status,
-      ProviderPaymentId = operation.ProviderPaymentId
-    };
+
+    var operationEvent = operation.MoveTo(
+        OperationStatus.Processing,
+        stateMachine);
+
+
+
+    await _repository.AddEventAsync(
+        operationEvent,
+        cancellationToken);
+
+
+
+    await _unitOfWork.SaveChangesAsync(
+        cancellationToken);
+
+
+
+    return Result<SubmitOperationResponse>.Success(
+        operation.ToSubmitResponse());
   }
-
-
 
 
   private static OperationResponse MapToResponse(
       Operation operation)
   {
-    return new OperationResponse
-    {
-      OperationId = operation.OperationId,
-      Amount = operation.Amount,
-      Currency = operation.Currency,
-      Description = operation.Description,
-      Status = operation.Status,
-      ProviderPaymentId = operation.ProviderPaymentId
-    };
+    return operation.ToResponse();
   }
 }

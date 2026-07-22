@@ -1,4 +1,4 @@
-using Application.Operations.Responses;
+using Application.Receipts.Responses;
 
 namespace Application.Receipts.Requests
 {
