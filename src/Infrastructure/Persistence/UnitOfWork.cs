@@ -3,14 +3,14 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Infrastructure.Persistence;
 
-public sealed class EfUnitOfWork : IUnitOfWork
+public sealed class UnitOfWork : IUnitOfWork
 {
   private readonly AppDbContext _dbContext;
 
   private IDbContextTransaction? _transaction;
 
 
-  public EfUnitOfWork(
+  public UnitOfWork(
       AppDbContext dbContext)
   {
     _dbContext = dbContext;

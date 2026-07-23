@@ -54,4 +54,7 @@ TestResults/
 # Node.js (если есть)
 node_modules/
 npm-debug.log
+
+# Other
+adminUI/
  

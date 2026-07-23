@@ -1,6 +1,5 @@
-namespace Application.Receipts.Responses;
 
-
+namespace Application.Receipts.Requests;
 
 public sealed class ReceiptRequest
 {
@@ -8,7 +7,7 @@ public sealed class ReceiptRequest
 
   public required string OperationId { get; init; }
 
-  public required string Result { get; init; }
+  public required ReceiptResult Result { get; init; }
 
   public string? Message { get; init; }
 
@@ -20,3 +19,5 @@ public enum ReceiptResult
   COMPLETED,
   REJECTED
 }
+
+
