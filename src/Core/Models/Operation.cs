@@ -66,6 +66,20 @@ public class Operation
   }
 
 
+  public DateTime? LastAttemptAt { get; private set; }
+
+  public int RetryCount { get; private set; }
+
+  public DateTime? NextRetryAt { get; private set; }
+
+  public void ScheduleNextRetry(DateTime now, TimeSpan delay)
+  {
+    RetryCount++;
+    LastAttemptAt = now;
+    NextRetryAt = now.Add(delay);
+  }
+
+
   public OperationEvent MoveTo(
   OperationStatus next,
   OperationStateMachine stateMachine)

@@ -1,4 +1,5 @@
 using Application.Interface;
+using Core.Enums;
 using Core.Models;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -71,8 +72,24 @@ public sealed class OperationRepository : IOperationRepository
       CancellationToken cancellationToken)
   {
     return await _dbContext.OperationEvents
+        .AsNoTracking()
         .Where(x => x.OperationId == operationId)
         .OrderBy(x => x.EventId)
         .ToListAsync(cancellationToken);
   }
+
+
+  public async Task<List<Operation>> GetProcessingAsync(
+      DateTime now,
+      CancellationToken cancellationToken)
+  {
+    return await _dbContext.Operations
+        .Where(x =>
+            x.Status == OperationStatus.Processing &&
+            (x.NextRetryAt == null || x.NextRetryAt <= now))
+        .ToListAsync(cancellationToken);
+  }
+
+
+
 }

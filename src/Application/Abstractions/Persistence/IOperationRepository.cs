@@ -32,4 +32,8 @@ public interface IOperationRepository
   Task<IReadOnlyList<OperationEvent>> GetEventsAsync(
       string operationId,
       CancellationToken cancellationToken);
+
+  Task<List<Operation>> GetProcessingAsync(
+      DateTime now,
+      CancellationToken cancellationToken);
 }
