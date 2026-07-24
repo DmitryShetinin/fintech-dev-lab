@@ -80,6 +80,20 @@ public class Operation
   }
 
 
+  public void AttachProviderPayment(string providerPaymentId)
+  {
+    if (ProviderPaymentId is null)
+    {
+      ProviderPaymentId = providerPaymentId;
+      return;
+    }
+
+    if (ProviderPaymentId != providerPaymentId)
+    {
+      throw new InvalidOperationException(
+          "ProviderPaymentId mismatch.");
+    }
+  }
   public OperationEvent MoveTo(
   OperationStatus next,
   OperationStateMachine stateMachine)

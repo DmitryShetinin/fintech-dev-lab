@@ -1,28 +1,52 @@
+using System.Net.Http.Json;
 using Application.Abstractions.Providers;
 using Application.Common;
 using Application.Provider;
 
 namespace Infrastructure.Providers;
 
-public class YooKassaProvider : IProviderClient
+public class YooKassaProvider : ProviderClientBase, IProviderClient
 {
-  public Task<Result<ProviderPaymentResponse>> CreatePaymentAsync(
-    ProviderPaymentRequest request,
-    CancellationToken cancellationToken)
+
+  private readonly HttpClient _httpClient;
+
+  public YooKassaProvider(HttpClient httpClient)
   {
-
-    // HTTP запрос в ЮKassa
-
-
-
-    return Task.FromResult(
-        Result<ProviderPaymentResponse>.Success(
-            new ProviderPaymentResponse
-            {
-              ProviderPaymentId = "123"
-            }));
+    _httpClient = httpClient;
   }
 
+  public async Task<Result<ProviderPaymentResponse>> CreatePaymentAsync(
+      ProviderPaymentRequest payment,
+      CancellationToken cancellationToken)
+  {
+    using var request = CreateRequest(
+            HttpMethod.Post,
+            "/payments",
+            payment.OperationId,
+            payment);
 
+    var response =
+        await _httpClient.SendAsync(
+            request,
+            cancellationToken);
 
+    if (!response.IsSuccessStatusCode)
+    {
+      return Result<ProviderPaymentResponse>.Failure(
+          $"Provider returned {(int)response.StatusCode}");
+    }
+
+    var providerResponse =
+        await response.Content.ReadFromJsonAsync<ProviderPaymentResponse>(
+            cancellationToken: cancellationToken);
+
+    if (providerResponse is null)
+    {
+      return Result<ProviderPaymentResponse>.Failure(
+          "Provider returned empty response.");
+    }
+
+    return Result<ProviderPaymentResponse>.Success(
+        providerResponse);
+  }
 }
