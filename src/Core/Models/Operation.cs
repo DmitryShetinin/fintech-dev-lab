@@ -57,6 +57,14 @@ public class Operation
         description);
   }
 
+  public OperationEvent StartProcessing(
+      OperationStateMachine stateMachine)
+  {
+    return MoveTo(
+        OperationStatus.Processing,
+        stateMachine);
+  }
+
 
   public OperationEvent MoveTo(
   OperationStatus next,
