@@ -1,5 +1,7 @@
 //namespace Infrastructure.BackgroundServices;
 
+using Application.Abstractions.Providers;
+using Application.Extensions;
 using Application.Interface;
 using Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,10 +13,12 @@ public class SubmissionBackgroundService : BackgroundService
   private readonly ILogger<SubmissionBackgroundService> _logger;
   private readonly IServiceProvider _serviceProvider; // чтобы создать scope
 
+
   public SubmissionBackgroundService(ILogger<SubmissionBackgroundService> logger, IServiceProvider serviceProvider)
   {
     _logger = logger;
     _serviceProvider = serviceProvider;
+
   }
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,15 +46,39 @@ public class SubmissionBackgroundService : BackgroundService
 
         foreach (var operation in operations)
         {
-          operation.ScheduleNextRetry(
-              now,
-              TimeSpan.FromSeconds(1));
+          try
+          {
+            operation.ScheduleNextRetry(
+          now,
+          TimeSpan.FromSeconds(1));
 
-          await unitOfWork.SaveChangesAsync(stoppingToken);
 
-          // TODO:
-          // вызвать ProviderClient
-          // обработать ответ
+            await unitOfWork.SaveChangesAsync(stoppingToken);
+            // TODO:
+            // вызвать ProviderClient
+            // обработать ответ
+            var result = await _providerClient.CreatePaymentAsync(
+                  operation.ToProviderPaymentRequest(),
+                  stoppingToken);
+
+
+            if (!result.IsSuccess)
+            {
+              continue;
+            }
+
+            operation.AttachProviderPayment(result.Value.ProviderPaymentId);
+
+
+            await unitOfWork.SaveChangesAsync(stoppingToken);
+
+          }
+          catch (Exception ex)
+          {
+            _logger.LogError($"Error {ex.Message}");
+          }
+
+
         }
 
         await Task.Delay(

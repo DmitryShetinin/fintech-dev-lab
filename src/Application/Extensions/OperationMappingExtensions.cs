@@ -1,4 +1,5 @@
 using Application.Operations.Responses;
+using Application.Provider;
 using Core.Models;
 
 
@@ -32,6 +33,18 @@ public static class OperationMappingExtensions
       OperationId = operation.OperationId,
       Status = operation.Status,
       ProviderPaymentId = operation.ProviderPaymentId
+    };
+  }
+
+  public static ProviderPaymentRequest ToProviderPaymentRequest(
+      this Operation operation)
+  {
+    return new ProviderPaymentRequest
+    {
+      OperationId = operation.OperationId,
+      Amount = operation.Amount,
+      Currency = operation.Currency,
+      Description = operation.Description
     };
   }
 
