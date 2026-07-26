@@ -1,10 +1,11 @@
 using Application.Abstractions.Providers;
 using Microsoft.Extensions.DependencyInjection;
 
+using Core.Enums;
+
 namespace Infrastructure.Providers;
 
-public sealed class ProviderClientFactory
-: IProviderClientFactory
+public sealed class ProviderClientFactory : IProviderClientFactory
 {
   private readonly IServiceProvider _serviceProvider;
 
