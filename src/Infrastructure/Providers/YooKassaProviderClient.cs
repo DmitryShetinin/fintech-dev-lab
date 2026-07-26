@@ -17,8 +17,8 @@ public class YooKassaProvider : ProviderClientBase, IProviderClient
     _httpClient = httpClient;
   }
 
-  public async Task<Result<ProviderPaymentResponse>> CreatePaymentAsync(
-      ProviderPaymentRequest payment,
+  public async Task<Result<ProviderResponse>> CreatePaymentAsync(
+      ProviderRequest payment,
       CancellationToken cancellationToken)
   {
     using var request = CreateRequest(
@@ -34,46 +34,34 @@ public class YooKassaProvider : ProviderClientBase, IProviderClient
 
     if (!response.IsSuccessStatusCode)
     {
-      return Result<ProviderPaymentResponse>.Failure(
+      return Result<ProviderResponse>.Failure(
           $"Provider returned {(int)response.StatusCode}");
     }
 
-    var providerResponse = await response.Content.ReadFromJsonAsync<ProviderPaymentResponse>(cancellationToken);
+    var providerResponse = await response.Content.ReadFromJsonAsync<ProviderResponse>(cancellationToken);
 
     if (providerResponse is null)
     {
-      return Result<ProviderPaymentResponse>.Failure(
+      return Result<ProviderResponse>.Failure(
           "Provider returned empty response.");
     }
 
-    return Result<ProviderPaymentResponse>.Success(
+    return Result<ProviderResponse>.Success(
         providerResponse);
   }
 
-  public RetryDecision GetRetryDecision(ProviderPaymentResponse response, int retryCount)
+  public bool IsTransientFailure(ProviderResponse response) => response.HttpStatusCode switch
   {
-    var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
+    HttpStatusCode.TooManyRequests
+        or HttpStatusCode.InternalServerError
+        or HttpStatusCode.BadGateway
+        or HttpStatusCode.ServiceUnavailable
+        or HttpStatusCode.GatewayTimeout
+            => true,
 
-    if (response.ProviderFailureReason is
-       ProviderFailureReason.Timeout
-       or ProviderFailureReason.Network
-       or ProviderFailureReason.Dns)
-    {
-      return RetryDecision.Retry(delay);
-    }
+    _ => false
 
-    return response.HttpStatusCode switch
-    {
-      HttpStatusCode.TooManyRequests
-          or HttpStatusCode.InternalServerError
-          or HttpStatusCode.BadGateway
-          or HttpStatusCode.ServiceUnavailable
-          or HttpStatusCode.GatewayTimeout
-              => RetryDecision.Retry(delay),
-
-      _ => RetryDecision.NoRetry()
-    };
-  }
+  };
 
 
 

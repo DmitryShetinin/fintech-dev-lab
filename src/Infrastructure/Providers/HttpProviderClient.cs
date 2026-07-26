@@ -6,8 +6,8 @@ namespace Infrastructure.Providers;
 
 public sealed class HttpProviderClient : IProviderClient
 {
-  public Task<Result<ProviderPaymentResponse>> CreatePaymentAsync(
-  ProviderPaymentRequest request,
+  public Task<Result<ProviderResponse>> CreatePaymentAsync(
+  ProviderRequest request,
   CancellationToken cancellationToken)
   {
 
@@ -15,17 +15,15 @@ public sealed class HttpProviderClient : IProviderClient
 
 
     return Task.FromResult(
-        Result<ProviderPaymentResponse>.Success(
-            new ProviderPaymentResponse
+        Result<ProviderResponse>.Success(
+            new ProviderResponse
             {
               ProviderPaymentId = "123"
             }));
   }
 
-  public RetryDecision GetRetryDecision(ProviderPaymentResponse response, int retryCount)
+  public bool IsTransientFailure(ProviderResponse response)
   {
     throw new NotImplementedException();
   }
-
-
 }

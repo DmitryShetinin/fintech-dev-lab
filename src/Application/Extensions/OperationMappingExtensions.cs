@@ -36,10 +36,10 @@ public static class OperationMappingExtensions
     };
   }
 
-  public static ProviderPaymentRequest ToProviderPaymentRequest(
+  public static ProviderRequest ToProviderRequest(
       this Operation operation)
   {
-    return new ProviderPaymentRequest
+    return new ProviderRequest
     {
       OperationId = operation.OperationId,
       Amount = operation.Amount,

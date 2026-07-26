@@ -12,5 +12,7 @@ public enum ProviderFailureReason
 
   Dns,
 
-  Http
+  Http,
+
+
 }
