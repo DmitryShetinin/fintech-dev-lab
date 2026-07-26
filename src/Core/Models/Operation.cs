@@ -98,6 +98,8 @@ public class Operation
           "ProviderPaymentId mismatch.");
     }
   }
+
+
   public OperationEvent MoveTo(
   OperationStatus next,
   OperationStateMachine stateMachine)

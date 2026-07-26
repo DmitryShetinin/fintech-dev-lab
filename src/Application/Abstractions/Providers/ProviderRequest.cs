@@ -1,7 +1,7 @@
 namespace Application.Provider;
 
 
-public sealed class ProviderPaymentRequest
+public sealed class ProviderRequest
 {
   public string OperationId { get; init; } = null!;
 
