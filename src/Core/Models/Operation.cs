@@ -1,5 +1,7 @@
 using Core.Enums;
 
+
+
 namespace Core.Models;
 
 
@@ -17,6 +19,8 @@ public class Operation
   public OperationStatus Status { get; private set; }
 
   public string? ProviderPaymentId { get; private set; }
+
+  public PaymentProvider Provider { get; private set; }
 
 
   private readonly List<OperationEvent> _events = [];
@@ -80,7 +84,7 @@ public class Operation
   }
 
 
-  public void AttachProviderPayment(string providerPaymentId)
+  public void MarkAsAcceptedByProvider(string providerPaymentId)
   {
     if (ProviderPaymentId is null)
     {

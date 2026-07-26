@@ -22,5 +22,10 @@ public sealed class HttpProviderClient : IProviderClient
             }));
   }
 
+  public RetryDecision GetRetryDecision(ProviderPaymentResponse response, int retryCount)
+  {
+    throw new NotImplementedException();
+  }
+
 
 }

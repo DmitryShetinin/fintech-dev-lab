@@ -1,3 +1,5 @@
+using Core.Enums;
+
 namespace Application.Abstractions.Providers;
 
 public interface IProviderClientFactory
