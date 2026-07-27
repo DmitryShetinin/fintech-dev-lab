@@ -2,12 +2,11 @@ using Application.Common;
 using Application.Receipts.Requests;
 using Application.Receipts.Responses;
 
+namespace Application.Abstractions.Receipt;
 
-namespace Application.Receipts;
-
-public interface IReceiptService
+public interface IReceiptProcessor
 {
   Task<Result<ReceiptResponse>> ProcessAsync(
-      ReceiptRequest receipt,
-      CancellationToken cancellationToken);
+    ReceiptRequest receipt,
+    CancellationToken token);
 }

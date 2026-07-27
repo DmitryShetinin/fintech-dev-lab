@@ -36,5 +36,10 @@ public interface IOperationRepository
   Task<List<Operation>> GetProcessingAsync(
       DateTime now,
       CancellationToken cancellationToken);
+
+
+
+  Task<IReadOnlyList<Operation>> GetWaitingForReceiptAsync(
+      CancellationToken cancellationToken);
 }
 

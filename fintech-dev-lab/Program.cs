@@ -1,15 +1,22 @@
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Providers;
 using Application.Interface;
-using Application.Interfaces;
 using Application.Operations;
 using Application.Receipts;
+using Core.Models;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Providers;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
+builder.Services.AddSingleton<OperationStateMachine>();
+
+builder.Services.AddScoped<IOperationService, OperationService>();
+builder.Services.AddScoped<IReceiptService, ReceiptService>();
 
 
 // MVC
@@ -31,6 +38,9 @@ builder.Services.AddDbContext<AppDbContext>(
 
 
 // Application services
+
+builder.Services.AddSingleton<OperationStateMachine>();
+
 
 builder.Services.AddScoped<IOperationService, OperationService>();
 

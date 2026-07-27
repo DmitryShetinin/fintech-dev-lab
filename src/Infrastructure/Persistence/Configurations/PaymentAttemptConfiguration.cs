@@ -59,7 +59,7 @@ public sealed class PaymentAttemptConfiguration :
 
     // Error
 
-    builder.Property(x => x.Error)
+    builder.Property(x => x.FailureMessage)
         .HasMaxLength(1000);
 
 

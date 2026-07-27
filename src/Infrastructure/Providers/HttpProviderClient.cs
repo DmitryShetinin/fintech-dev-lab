@@ -22,6 +22,11 @@ public sealed class HttpProviderClient : IProviderClient
             }));
   }
 
+  public Task<Result<ProviderPaymentStatusResponse>> GetPaymentStatusAsync(string providerPaymentId, CancellationToken cancellationToken)
+  {
+    throw new NotImplementedException();
+  }
+
   public bool IsTransientFailure(ProviderResponse response)
   {
     throw new NotImplementedException();

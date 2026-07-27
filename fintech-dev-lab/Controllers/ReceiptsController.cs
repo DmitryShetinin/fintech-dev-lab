@@ -1,4 +1,6 @@
+using Application.Abstractions.Receipt;
 using Application.Receipts;
+using Application.Receipts.Requests;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -11,30 +13,31 @@ public class ReceiptsController : ControllerBase
 {
   private readonly IReceiptService _receiptService;
 
-
-  public ReceiptsController(
-      IReceiptService receiptService)
+  public ReceiptsController(IReceiptService receiptService)
   {
     _receiptService = receiptService;
   }
 
 
-  [HttpGet("{operationId}")]
-  public async Task<IActionResult> Get(
-      string operationId,
-      CancellationToken cancellationToken)
+  public IReceiptService ReceiptService { get; }
+
+  [HttpPost("receipts")]
+  public async Task<IActionResult> Receive(
+      ReceiptRequest request,
+      CancellationToken token)
   {
-    var result = await _receiptService.GetAsync(
-        operationId,
-        cancellationToken);
+    var result =
+        await _receiptService.ProcessAsync(
+            request,
+            token);
 
 
     if (!result.IsSuccess)
     {
-      return NotFound(result.Error);
+      return Conflict(result.Error);
     }
 
 
-    return Ok(result.Value);
+    return NoContent();
   }
 }

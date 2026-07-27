@@ -11,7 +11,7 @@ public static class ReceiptMappingExtensions
   {
     return new ReceiptResponse
     {
-      OperationId = operation.OperationId,
+      OperationId = operation.Id,
       Amount = operation.Amount,
       Currency = operation.Currency,
       Description = operation.Description,

@@ -3,7 +3,6 @@ using Application.Abstractions.Providers;
 using Application.Common;
 using Application.Extensions;
 using Application.Interface;
-using Application.Interfaces;
 using Application.Operations.Responses;
 using Core.Enums;
 using Core.Models;
@@ -60,7 +59,7 @@ public class SubmissionWorkflow
     return Result<SubmitOperationResponse>.Success(
         new SubmitOperationResponse
         {
-          OperationId = operation.OperationId,
+          OperationId = operation.Id,
           Status = operation.Status,
           ProviderPaymentId = operation.ProviderPaymentId
         });

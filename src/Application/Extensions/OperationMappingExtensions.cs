@@ -14,7 +14,7 @@ public static class OperationMappingExtensions
   {
     return new OperationResponse
     {
-      OperationId = operation.OperationId,
+      OperationId = operation.Id,
       Amount = operation.Amount,
       Currency = operation.Currency,
       Description = operation.Description,
@@ -30,7 +30,7 @@ public static class OperationMappingExtensions
   {
     return new SubmitOperationResponse
     {
-      OperationId = operation.OperationId,
+      OperationId = operation.Id,
       Status = operation.Status,
       ProviderPaymentId = operation.ProviderPaymentId
     };
@@ -41,7 +41,7 @@ public static class OperationMappingExtensions
   {
     return new ProviderRequest
     {
-      OperationId = operation.OperationId,
+      OperationId = operation.Id,
       Amount = operation.Amount,
       Currency = operation.Currency,
       Description = operation.Description

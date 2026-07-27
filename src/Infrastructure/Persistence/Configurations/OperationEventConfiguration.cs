@@ -45,9 +45,9 @@ public sealed class OperationEventConfiguration : IEntityTypeConfiguration<Opera
       x.EventId
     });
 
-    builder.HasOne<Operation>()
-        .WithMany(x => x.Events)
-        .HasForeignKey(x => x.OperationId)
-        .OnDelete(DeleteBehavior.Cascade);
+    // builder.HasOne<Operation>()
+    //     .WithMany(x => x.Events)
+    //     .HasForeignKey(x => x.OperationId)
+    //     .OnDelete(DeleteBehavior.Cascade);
   }
 }
