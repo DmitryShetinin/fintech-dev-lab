@@ -41,7 +41,7 @@ public sealed class OperationRepository : IOperationRepository
     return await _dbContext.Operations
         .Include(x => x.Events)
         .FirstOrDefaultAsync(
-            x => x.OperationId == operationId,
+            x => x.Id == operationId,
             cancellationToken);
   }
 
@@ -52,7 +52,7 @@ public sealed class OperationRepository : IOperationRepository
   {
     return await _dbContext.Operations
         .AnyAsync(
-            x => x.OperationId == operationId,
+            x => x.Id == operationId,
             cancellationToken);
   }
 
@@ -84,6 +84,7 @@ public sealed class OperationRepository : IOperationRepository
       CancellationToken cancellationToken)
   {
     return await _dbContext.Operations
+        .AsNoTracking()
         .Where(x =>
             x.Status == OperationStatus.Processing &&
             (x.NextRetryAt == null || x.NextRetryAt <= now))

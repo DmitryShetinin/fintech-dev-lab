@@ -1,3 +1,4 @@
+using Application.Abstractions.Persistence;
 using Application.Abstractions.Providers;
 using Application.Common;
 using Application.Extensions;

@@ -1,11 +1,12 @@
+
 using Application.Common;
 using Application.Extensions;
 using Application.Interface;
-using Application.Interfaces;
 using Application.Operations.Requests;
 using Application.Operations.Responses;
 using Core.Enums;
 using Core.Models;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace Application.Operations;
@@ -15,21 +16,24 @@ public class OperationService : IOperationService
 {
   private readonly IOperationRepository _repository;
   private readonly IUnitOfWork _unitOfWork;
+  private readonly OperationStateMachine _stateMachine;
 
 
   public OperationService(
       IOperationRepository repository,
-      IUnitOfWork unitOfWork)
+      IUnitOfWork unitOfWork,
+      OperationStateMachine stateMachine)
   {
     _repository = repository;
     _unitOfWork = unitOfWork;
+    _stateMachine = stateMachine;
   }
 
 
 
   public async Task<Result<OperationResponse>> CreateAsync(
-     CreateOperationRequest request,
-     CancellationToken cancellationToken)
+      CreateOperationRequest request,
+      CancellationToken cancellationToken)
   {
     var exists = await _repository.ExistsAsync(
         request.OperationId,
@@ -50,21 +54,29 @@ public class OperationService : IOperationService
         request.Description);
 
 
+    try
+    {
+      await _repository.AddAsync(
+          operation,
+          cancellationToken);
 
-    await _repository.AddAsync(
-        operation,
-        cancellationToken);
 
-
-
-    await _unitOfWork.SaveChangesAsync(
-        cancellationToken);
-
+      await _unitOfWork.SaveChangesAsync(
+          cancellationToken);
+    }
+    catch (DbUpdateException)
+    {
+      // UNIQUE constraint поймал гонку
+      return Result<OperationResponse>.Failure(
+          $"Operation {request.OperationId} already exists");
+    }
 
 
     return Result<OperationResponse>.Success(
         operation.ToResponse());
   }
+
+
 
   public async Task<Result<OperationResponse>> GetAsync(
       string operationId,
@@ -78,13 +90,14 @@ public class OperationService : IOperationService
     if (operation is null)
     {
       return Result<OperationResponse>.Failure(
-          "Operation not found");
+          $"Operation {operationId} not found");
     }
 
 
     return Result<OperationResponse>.Success(
         operation.ToResponse());
   }
+
 
 
 
@@ -145,10 +158,9 @@ public class OperationService : IOperationService
         COMPLETED
         REJECTED
 
-        ничего не создаем
-        просто возвращаем состояние
+        ничего не создаём,
+        возвращаем текущее состояние.
     */
-
 
     if (operation.Status != OperationStatus.Created)
     {
@@ -158,27 +170,9 @@ public class OperationService : IOperationService
 
 
 
-    /*
-        Здесь позже будет:
-
-        _submissionWorkflow.SubmitAsync(operation)
-
-        который:
-
-        1. создаст PaymentAttempt
-        2. сделает MoveTo(PROCESSING)
-        3. создаст OperationEvent
-        4. SaveChanges()
-        5. отправит провайдеру
-    */
-
-
-    var stateMachine = new OperationStateMachine();
-
-
     var operationEvent = operation.MoveTo(
         OperationStatus.Processing,
-        stateMachine);
+        _stateMachine);
 
 
 
@@ -188,19 +182,33 @@ public class OperationService : IOperationService
 
 
 
-    await _unitOfWork.SaveChangesAsync(
-        cancellationToken);
+    try
+    {
+      await _unitOfWork.SaveChangesAsync(
+          cancellationToken);
+    }
+    catch (DbUpdateConcurrencyException)
+    {
+      var actualOperation =
+          await _repository.GetByIdAsync(
+              operationId,
+              cancellationToken);
+
+
+      if (actualOperation is null)
+      {
+        return Result<SubmitOperationResponse>.Failure(
+            $"Operation {operationId} not found");
+      }
+
+
+      return Result<SubmitOperationResponse>.Success(
+          actualOperation.ToSubmitResponse());
+    }
 
 
 
     return Result<SubmitOperationResponse>.Success(
         operation.ToSubmitResponse());
-  }
-
-
-  private static OperationResponse MapToResponse(
-      Operation operation)
-  {
-    return operation.ToResponse();
   }
 }

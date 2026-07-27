@@ -4,10 +4,16 @@ namespace Application.Abstractions.Retry;
 
 public sealed class ExponentialBackoffRetryPolicy : IRetryPolicy
 {
-  private readonly Random _random = new();
+  private const int MaxAttempts = 10;
 
   private static readonly TimeSpan MaxDelay =
       TimeSpan.FromMinutes(5);
+
+
+  public bool CanRetry(int retryCount)
+  {
+    return retryCount < MaxAttempts;
+  }
 
 
   public TimeSpan GetRetryDelay(int retryCount)
@@ -16,17 +22,16 @@ public sealed class ExponentialBackoffRetryPolicy : IRetryPolicy
         Math.Pow(2, retryCount);
 
 
-    var limitedSeconds =
+    var cappedSeconds =
         Math.Min(
             exponentialSeconds,
             MaxDelay.TotalSeconds);
 
 
-    var jitterMilliseconds =
-        _random.Next(0, 1000);
+    var jitter =
+        Random.Shared.NextDouble() * cappedSeconds;
 
 
-    return TimeSpan.FromSeconds(limitedSeconds)
-        + TimeSpan.FromMilliseconds(jitterMilliseconds);
+    return TimeSpan.FromSeconds(jitter);
   }
 }
