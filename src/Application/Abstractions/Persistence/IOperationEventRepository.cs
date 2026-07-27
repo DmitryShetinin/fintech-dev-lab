@@ -1,7 +1,6 @@
 namespace Application.Abstractions.Persistence
 {
-  public interface IPaymentAttemptRepository
+  public interface IOperationEventRepository
   {
-
   }
 }

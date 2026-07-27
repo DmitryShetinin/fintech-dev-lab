@@ -8,7 +8,7 @@ namespace Core.Models;
 public class Operation
 {
 
-  public string OperationId { get; private set; }
+  public string Id { get; private set; }
 
   public decimal Amount { get; private set; }
 
@@ -22,10 +22,10 @@ public class Operation
 
   public PaymentProvider Provider { get; private set; }
 
-
-  private readonly List<OperationEvent> _events = [];
-  public IReadOnlyCollection<OperationEvent> Events => _events;
-
+  //
+  // private readonly List<OperationEvent> _events = [];
+  // public IReadOnlyCollection<OperationEvent> Events => _events;
+  //
 
 
   private Operation()
@@ -39,7 +39,7 @@ public class Operation
       string description)
   {
 
-    OperationId = operationId;
+    Id = operationId;
     Amount = amount;
     Currency = currency;
     Description = description;
@@ -76,15 +76,19 @@ public class Operation
 
   public DateTime? NextRetryAt { get; private set; }
 
+  public int Version { get; private set; }
+
   public void ScheduleNextRetry(DateTime now, TimeSpan delay)
   {
     RetryCount++;
     LastAttemptAt = now;
     NextRetryAt = now.Add(delay);
+
+
   }
 
 
-  public void MarkAsAcceptedByProvider(string providerPaymentId)
+  public void SetProviderPaymentId(string providerPaymentId)
   {
     if (ProviderPaymentId is null)
     {
@@ -99,6 +103,35 @@ public class Operation
     }
   }
 
+  public OperationEvent WaitForReceipt(
+      OperationStateMachine stateMachine,
+      string providerPaymentId)
+  {
+    SetProviderPaymentId(providerPaymentId);
+
+    return MoveTo(
+        OperationStatus.WaitingForReceipt,
+        stateMachine);
+  }
+
+
+  public OperationEvent Complete(
+      OperationStateMachine stateMachine)
+  {
+    return MoveTo(
+        OperationStatus.Completed,
+        stateMachine);
+  }
+
+
+  public OperationEvent Reject(
+      OperationStateMachine stateMachine)
+  {
+    return MoveTo(
+        OperationStatus.Rejected,
+        stateMachine);
+  }
+
 
   public OperationEvent MoveTo(
   OperationStatus next,
@@ -111,7 +144,7 @@ public class Operation
     Status = next;
 
     return OperationEvent.Create(
-        OperationId,
+        Id,
         previous,
         next,
         $"Operation moved {previous} -> {next}");

@@ -11,10 +11,19 @@ public sealed class OperationConfiguration : IEntityTypeConfiguration<Operation>
     builder.ToTable("Operations");
 
     // Primary Key
-    builder.HasKey(x => x.OperationId);
+    builder.HasKey(x => x.Id);
+
+
+    // Index
+    builder.HasIndex(x => x.Id).IsUnique();
+
+
+    // Version
+    builder.Property(x => x.Version).IsConcurrencyToken();
+
 
     // Properties
-    builder.Property(x => x.OperationId)
+    builder.Property(x => x.Id)
         .HasMaxLength(100)
         .IsRequired();
 
@@ -42,6 +51,7 @@ public sealed class OperationConfiguration : IEntityTypeConfiguration<Operation>
 
     builder.HasIndex(x => x.ProviderPaymentId)
         .IsUnique(false);
+
 
     // Relationships
     builder.HasMany(x => x.Events)
