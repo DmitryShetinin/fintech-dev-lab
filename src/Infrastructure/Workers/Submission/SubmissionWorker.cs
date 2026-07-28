@@ -1,5 +1,6 @@
 using Application.Abstractions.Queue;
 using Application.Abstractions.Submission;
+using Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -12,7 +13,7 @@ public class SubmissionWorker : BackgroundService
   private readonly ISubmissionQueue _queue;
 
   private readonly IServiceProvider _serviceProvider;
-
+  private readonly WorkerOptions _options;
 
   public SubmissionWorker(ISubmissionQueue queue, IServiceProvider serviceProvider)
   {
@@ -23,7 +24,7 @@ public class SubmissionWorker : BackgroundService
   protected override async Task ExecuteAsync(
    CancellationToken token)
   {
-    var tasks = Enumerable.Range(0, 8)
+    var tasks = Enumerable.Range(0, _options.SubmissionWorkers)
         .Select(_ => ConsumeAsync(token));
 
     await Task.WhenAll(tasks);

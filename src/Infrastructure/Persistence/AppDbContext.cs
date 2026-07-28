@@ -6,7 +6,6 @@
 
 using Core.Models;
 using Infrastructure.Configurations;
-using Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence;
@@ -18,7 +17,6 @@ public class AppDbContext : DbContext
   public DbSet<Operation> Operations => Set<Operation>(); public DbSet<OperationEvent> OperationEvents => Set<OperationEvent>();
 
   public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
-  public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
 
 
