@@ -13,6 +13,10 @@ public interface IProviderClient
 
   bool IsTransientFailure(ProviderResponse response);
 
+  Task<Result<ProviderPaymentStatusResponse>> GetPaymentStatusAsync(
+      string providerPaymentId,
+      CancellationToken cancellationToken);
+
 
 }
 

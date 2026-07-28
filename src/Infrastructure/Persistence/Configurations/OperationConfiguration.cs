@@ -54,9 +54,9 @@ public sealed class OperationConfiguration : IEntityTypeConfiguration<Operation>
 
 
     // Relationships
-    builder.HasMany(x => x.Events)
-        .WithOne()
-        .HasForeignKey(x => x.OperationId)
-        .OnDelete(DeleteBehavior.Cascade);
+    // builder.HasMany(x => x.Events)
+    //     .WithOne()
+    //     .HasForeignKey(x => x.OperationId)
+    //     .OnDelete(DeleteBehavior.Cascade);
   }
 }

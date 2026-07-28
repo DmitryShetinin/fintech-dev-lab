@@ -50,6 +50,44 @@ public class YooKassaProvider : ProviderClientBase, IProviderClient
         providerResponse);
   }
 
+  public async Task<Result<ProviderPaymentStatusResponse>> GetPaymentStatusAsync(
+    string providerPaymentId,
+    CancellationToken cancellationToken)
+  {
+    using var request = CreateRequest(
+        HttpMethod.Get,
+        $"/payments/{providerPaymentId}",
+        providerPaymentId, "");
+
+
+    var response = await _httpClient.SendAsync(
+        request,
+        cancellationToken);
+
+
+    if (!response.IsSuccessStatusCode)
+    {
+      return Result<ProviderPaymentStatusResponse>.Failure(
+          $"Provider returned {(int)response.StatusCode}");
+    }
+
+
+    var providerResponse =
+        await response.Content.ReadFromJsonAsync<ProviderPaymentStatusResponse>(
+            cancellationToken);
+
+
+    if (providerResponse is null)
+    {
+      return Result<ProviderPaymentStatusResponse>.Failure(
+          "Provider returned empty response.");
+    }
+
+
+    return Result<ProviderPaymentStatusResponse>.Success(
+        providerResponse);
+  }
+
   public bool IsTransientFailure(ProviderResponse response) => response.HttpStatusCode switch
   {
     HttpStatusCode.TooManyRequests

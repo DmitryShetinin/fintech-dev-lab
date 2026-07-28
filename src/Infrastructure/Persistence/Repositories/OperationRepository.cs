@@ -39,8 +39,7 @@ public sealed class OperationRepository : IOperationRepository
       CancellationToken cancellationToken)
   {
     return await _dbContext.Operations
-        .Include(x => x.Events)
-        .FirstOrDefaultAsync(
+            .FirstOrDefaultAsync(
             x => x.Id == operationId,
             cancellationToken);
   }
@@ -54,6 +53,15 @@ public sealed class OperationRepository : IOperationRepository
         .AnyAsync(
             x => x.Id == operationId,
             cancellationToken);
+  }
+
+  public async Task<IReadOnlyList<Operation>> GetWaitingForReceiptAsync(
+     CancellationToken cancellationToken)
+  {
+    return await _dbContext.Operations
+        .Where(x =>
+            x.Status == OperationStatus.WaitingForReceipt)
+        .ToListAsync(cancellationToken);
   }
 
 
