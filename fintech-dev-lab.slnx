@@ -3,8 +3,7 @@
     <Project Path="src/Application/Application.csproj" />
     <Project Path="src/Core/Core.csproj" />
     <Project Path="src/Infrastructure/Infrastructure.csproj" />
+    <Project Path="src/Tests/IntegrationTests/IntegrationTests.csproj" />
   </Folder>
   <Project Path="fintech-dev-lab/fintech-dev-lab.csproj" />
-  <Project Path="src/Tests/IntegrationTests/IntegrationTests.csproj" />
-  <Project Path="Tests/IntegrationTests/fintech-dev-lab.IntegrationTests.csproj" />
 </Solution>

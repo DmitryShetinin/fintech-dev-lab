@@ -1,4 +1,3 @@
-using Application.Common;
 using Application.Interface;
 using Application.Receipts;
 using Application.Receipts.Requests;
@@ -6,7 +5,6 @@ using Core.Enums;
 using Core.Models;
 using FluentAssertions;
 using Moq;
-using Xunit;
 
 namespace Application.Tests.Receipts;
 

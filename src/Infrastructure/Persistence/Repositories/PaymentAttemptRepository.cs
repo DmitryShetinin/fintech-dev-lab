@@ -35,6 +35,7 @@ public class PaymentAttemptRepository : IPaymentAttemptRepository
   {
     return await _dbContext.PaymentAttempts
         .Where(x => x.OperationId == operationId)
+        .AsNoTracking()
         .OrderBy(x => x.AttemptNumber)
         .ToListAsync(cancellationToken);
   }
