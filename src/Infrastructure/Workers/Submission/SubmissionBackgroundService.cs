@@ -1,19 +1,23 @@
-
+using Application.Abstractions.Queue;
+using Application.Interface;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Application.Abstractions.Submission;
-using Application.Interface;
-using Application.Abstractions.Queue;
+
+
 
 
 
 
 namespace Infrastructure.BackgroundServices;
 
-
-public class SubmissionBackgroundService : BackgroundService
+public sealed class SubmissionBackgroundService : BackgroundService
 {
   private readonly IServiceProvider _serviceProvider;
+
+  public SubmissionBackgroundService(IServiceProvider serviceProvider)
+  {
+    _serviceProvider = serviceProvider;
+  }
 
   protected override async Task ExecuteAsync(
       CancellationToken token)
@@ -44,8 +48,5 @@ public class SubmissionBackgroundService : BackgroundService
           TimeSpan.FromSeconds(1),
           token);
     }
-
-
-
   }
 }

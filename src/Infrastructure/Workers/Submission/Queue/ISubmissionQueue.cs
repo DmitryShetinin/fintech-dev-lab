@@ -1,10 +1,7 @@
-
 using System.Threading.Channels;
 using Core.Models;
 
-namespace Application.Abstractions.Queue;
-
-
+namespace Infrastructure.Workers.Submission.Queue;
 
 public interface ISubmissionQueue
 {
