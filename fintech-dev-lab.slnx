@@ -5,5 +5,6 @@
     <Project Path="src/Infrastructure/Infrastructure.csproj" />
   </Folder>
   <Project Path="fintech-dev-lab/fintech-dev-lab.csproj" />
+  <Project Path="src/Tests/IntegrationTests/IntegrationTests.csproj" />
   <Project Path="Tests/IntegrationTests/fintech-dev-lab.IntegrationTests.csproj" />
 </Solution>

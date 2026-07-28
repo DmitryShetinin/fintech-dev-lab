@@ -1,4 +1,4 @@
-﻿namespace fintech_dev_lab.IntegrationTests;
+﻿namespace IntegrationTests;
 
 public class UnitTest1
 {
