@@ -1,7 +1,14 @@
+using Core.Models;
+
 namespace Application.Abstractions.Submission;
 
 public interface ISubmissionProcessor
 {
+
+
   Task SubmitOperationAsync(
-      CancellationToken cancellationToken);
+      Operation operation,
+      CancellationToken token);
+
+
 }

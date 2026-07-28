@@ -15,7 +15,6 @@ namespace Application.Abstractions.Submission;
 
 public class SubmissionProcessor : ISubmissionProcessor
 {
-  private readonly IOperationRepository _operationRepository;
   private readonly IPaymentAttemptRepository _paymentAttemptRepository;
   private readonly IProviderClientFactory _providerFactory;
   private readonly IRetryPolicy _retryPolicy;
@@ -25,13 +24,11 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
   public SubmissionProcessor(
-      IOperationRepository operationRepository,
       IPaymentAttemptRepository attemptRepository,
       IProviderClientFactory providerFactory,
       IRetryPolicy retryPolicy,
       IUnitOfWork unitOfWork, OperationStateMachine stateMachine)
   {
-    _operationRepository = operationRepository;
     _paymentAttemptRepository = attemptRepository;
     _providerFactory = providerFactory;
     _retryPolicy = retryPolicy;
@@ -41,30 +38,13 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
   public async Task SubmitOperationAsync(
-      CancellationToken token)
-  {
-    var operations =
-        await _operationRepository
-            .GetProcessingAsync(
-                DateTime.UtcNow,
-                token);
-
-
-    foreach (var operation in operations)
-    {
-      await ProcessOperationAsync(
-          operation,
-          token);
-    }
-  }
-
-
-  private async Task ProcessOperationAsync(
      Operation operation,
-
      CancellationToken stoppingToken)
   {
-    var provider = _providerFactory.Get(operation.Provider);
+    var provider =
+       _providerFactory.Get(operation.Provider);
+
+
 
     var attempt = PaymentAttempt.Start(
         operation.Id,
@@ -119,9 +99,8 @@ public class SubmissionProcessor : ISubmissionProcessor
 
     await _unitOfWork.SaveChangesAsync(
         stoppingToken);
+
   }
-
-
 
 
   private async Task HandleProviderCommunicationFailure(
