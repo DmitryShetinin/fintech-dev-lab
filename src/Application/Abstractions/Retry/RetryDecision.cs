@@ -1,5 +1,6 @@
 using Application.Abstractions.Providers;
 using Application.Configuration;
+using Core.Enums;
 using Microsoft.Extensions.Options;
 
 namespace Application.Abstractions.Retry;
@@ -16,11 +17,32 @@ public sealed class ExponentialBackoffRetryPolicy : IRetryPolicy
   }
 
 
-  public bool CanRetry(int retryCount)
+  public bool CanRetry(
+       ProviderFailureReason reason,
+       int retryCount)
   {
-    return retryCount < _options.MaxAttempts;
-  }
+    if (retryCount >= _options.MaxAttempts)
+      return false;
+    
+    return reason switch
+    {
+      ProviderFailureReason.Network => true,
 
+      ProviderFailureReason.Timeout => true,
+
+      ProviderFailureReason.Dns => true,
+
+      ProviderFailureReason.HttpTransient => true,
+
+      ProviderFailureReason.HttpPermanent => false,
+
+      ProviderFailureReason.Validation => false,
+
+      ProviderFailureReason.Unauthorized => false,
+
+      _ => false
+    };
+  }
 
   public TimeSpan GetRetryDelay(int retryCount)
   {

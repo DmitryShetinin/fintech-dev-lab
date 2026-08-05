@@ -12,7 +12,8 @@ public static class DependencyInjection
     services
        .AddPersistence(configuration)
        .AddWorkers(configuration)
-       .AddTelemetry();
+       .AddTelemetry()
+       .AddProviders();
 
     return services;
 

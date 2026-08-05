@@ -1,9 +1,8 @@
 
-using Application.Abstractions.Providers;
+
 using Application.Abstractions.Queue;
 using Infrastructure.Configuration;
-using Infrastructure.Providers;
-using Infrastructure.Workers.Queue;
+using Infrastructure.Queue;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

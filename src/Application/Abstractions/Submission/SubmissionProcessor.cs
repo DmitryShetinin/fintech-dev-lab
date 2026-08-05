@@ -1,13 +1,12 @@
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Providers;
 using Application.Abstractions.Retry;
+using Application.Common.Failures;
 using Application.Extensions;
 using Application.Interface;
 using Application.Provider;
-using Core.Enums;
 using Core.Models;
 using Microsoft.Extensions.Logging;
-
 
 
 namespace Application.Abstractions.Submission;
@@ -15,170 +14,180 @@ namespace Application.Abstractions.Submission;
 
 public class SubmissionProcessor : ISubmissionProcessor
 {
-  private readonly IPaymentAttemptRepository _paymentAttemptRepository;
-  private readonly IProviderClientFactory _providerFactory;
-  private readonly IRetryPolicy _retryPolicy;
-  private readonly IUnitOfWork _unitOfWork;
-  private readonly OperationStateMachine _stateMachine;
-  private readonly ILogger<SubmissionProcessor> _logger;
-
-
-  public SubmissionProcessor(
-      IPaymentAttemptRepository attemptRepository,
-      IProviderClientFactory providerFactory,
-      IRetryPolicy retryPolicy,
-      IUnitOfWork unitOfWork, OperationStateMachine stateMachine)
-  {
-    _paymentAttemptRepository = attemptRepository;
-    _providerFactory = providerFactory;
-    _retryPolicy = retryPolicy;
-    _unitOfWork = unitOfWork;
-    _stateMachine = stateMachine;
-  }
-
-
-  public async Task SubmitOperationAsync(
-     Operation operation,
-     CancellationToken stoppingToken)
-  {
-    var provider =
-       _providerFactory.Get(operation.Provider);
+    private readonly IPaymentAttemptRepository _paymentAttemptRepository;
+    private readonly IProviderClientFactory _providerFactory;
+    private readonly IRetryPolicy _retryPolicy;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly OperationStateMachine _stateMachine;
+    private readonly ILogger<SubmissionProcessor> _logger;
 
 
 
-    var attempt = PaymentAttempt.Start(
-        operation.Id,
-        operation.RetryCount + 1);
-
-    await _paymentAttemptRepository.AddAsync(
-        attempt,
-        stoppingToken);
-
-    await _unitOfWork.SaveChangesAsync(
-        stoppingToken);
-
-
-
-    var result = await provider.CreatePaymentAsync(
-        operation.ToProviderRequest(),
-        stoppingToken);
-
-
-    if (!result.IsSuccess)
+    public SubmissionProcessor(
+        IPaymentAttemptRepository attemptRepository,
+        IProviderClientFactory providerFactory,
+        IRetryPolicy retryPolicy,
+        IUnitOfWork unitOfWork,
+        OperationStateMachine stateMachine,
+        ILogger<SubmissionProcessor> logger)
     {
-      await HandleProviderCommunicationFailure(
-          operation,
-          attempt,
-          result.Error!,
+        _paymentAttemptRepository = attemptRepository;
+        _providerFactory = providerFactory;
+        _retryPolicy = retryPolicy;
+        _unitOfWork = unitOfWork;
+        _stateMachine = stateMachine;
+        _logger = logger;
+    }
+
+
+
+
+    public async Task SubmitOperationAsync(
+        Operation operation,
+        CancellationToken stoppingToken)
+    {
+        var provider =
+            _providerFactory.Get(operation.Provider);
+
+
+
+        var attemptNumber =
+            await _paymentAttemptRepository.GetNextAttemptNumberAsync(
+                operation.Id,
+                PaymentAttemptType.Submission,
                 stoppingToken);
 
-      return;
+
+
+        var attempt = PaymentAttempt.Start(
+            operation.Id,
+            attemptNumber,
+            PaymentAttemptType.Submission);
+
+
+
+        await _paymentAttemptRepository.AddAsync(
+            attempt,
+            stoppingToken);
+
+
+        await _unitOfWork.SaveChangesAsync(
+            stoppingToken);
+
+
+
+        var result =
+            await provider.CreatePaymentAsync(
+                operation.ToProviderRequest(),
+                stoppingToken);
+
+
+
+        if (!result.IsSuccess)
+        {
+            var failure =
+                result.GetError<ProviderFailure>();
+
+
+            await HandleFailure(
+                attempt,
+                failure!,
+                stoppingToken);
+
+
+            return;
+        }
+
+
+
+        var response =
+            result.Value!;
+
+
+
+        HandleProviderAccepted(
+            operation,
+            attempt,
+            response);
+
+
+
+        await _unitOfWork.SaveChangesAsync(
+            stoppingToken);
     }
 
 
-    var response = result.Value!;
 
 
-    if (provider.IsTransientFailure(response))
+
+    private async Task HandleFailure(
+        PaymentAttempt attempt,
+        ProviderFailure failure,
+        CancellationToken ct)
     {
-      await HandleTransientProviderFailure(
-          operation,
-          attempt,
-          response,
-                 stoppingToken);
+        attempt.Fail(
+            failure.Reason,
+            failure.Message);
 
-      return;
+
+
+        if (!_retryPolicy.CanRetry(
+            failure.Reason,
+            attempt.AttemptNumber))
+        {
+            await _unitOfWork.SaveChangesAsync(ct);
+
+
+            _logger.LogError(
+                "Submission failed permanently. Operation {OperationId}. Reason {Reason}",
+                attempt.OperationId,
+                failure.Reason);
+
+
+            return;
+        }
+
+
+
+        var delay =
+            _retryPolicy.GetRetryDelay(
+                attempt.AttemptNumber);
+
+
+
+        attempt.ScheduleRetry(
+                DateTime.UtcNow,
+                delay);
+
+
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+
+
+        _logger.LogWarning(
+            "Submission failed. Operation {OperationId}. Reason {Reason}. Retry after {Delay}",
+            attempt.OperationId,
+            failure.Reason,
+            delay);
     }
 
 
-    HandleProviderAccepted(
-        operation,
-        attempt,
-        response);
-
-
-    await _unitOfWork.SaveChangesAsync(
-        stoppingToken);
-
-  }
-
-
-  private async Task HandleProviderCommunicationFailure(
-      Operation operation,
-      PaymentAttempt attempt,
-      string error,
-      CancellationToken stoppingToken)
-  {
-    attempt.Fail(
-        ProviderFailureReason.Network,
-        error);
 
 
 
-    var delay = _retryPolicy.GetRetryDelay(
-      operation.RetryCount + 1);
-
-    operation.ScheduleNextRetry(
-      DateTime.UtcNow,
-      delay);
-
-
-    await _unitOfWork.SaveChangesAsync(
-        stoppingToken);
-
-
-    _logger.LogWarning(
-        "Failed to submit operation {OperationId}. Error: {Error}. Retry after {Delay}",
-        operation.Id,
-        error,
-        delay);
-  }
-
-  private async Task HandleTransientProviderFailure(
-      Operation operation,
-      PaymentAttempt attempt,
-      ProviderResponse response,
-      CancellationToken stoppingToken)
-  {
-    attempt.Fail(
-        ProviderFailureReason.Http,
-        $"Provider returned {(int?)response.HttpStatusCode}");
-
-
-    var delay = _retryPolicy.GetRetryDelay(
-        operation.RetryCount + 1);
-
-
-    operation.ScheduleNextRetry(
-        DateTime.UtcNow,
-        delay);
-
-
-    await _unitOfWork.SaveChangesAsync(
-        stoppingToken);
-
-
-    _logger.LogWarning(
-        "Provider temporary failure for operation {OperationId}. Retry after {Delay}",
-        operation.Id,
-        delay);
-  }
-
-  private void HandleProviderAccepted(
-      Operation operation,
-      PaymentAttempt attempt,
-      ProviderResponse response)
-  {
-    operation.WaitForReceipt(
-        _stateMachine,
-        response.ProviderPaymentId);
-
-
-    attempt.MarkProviderAccepted(
-        response.ProviderPaymentId);
-  }
+    private void HandleProviderAccepted(
+        Operation operation,
+        PaymentAttempt attempt,
+        ProviderResponse response)
+    {
+        operation.WaitForReceipt(
+            _stateMachine,
+            response.ProviderPaymentId!);
 
 
 
-
+        attempt.MarkProviderAccepted(
+            response.ProviderPaymentId!);
+    }
 }

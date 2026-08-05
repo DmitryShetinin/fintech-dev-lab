@@ -1,6 +1,7 @@
 
 using Application;
-using Infrastructure;
+ 
+using Infrastructure.DependencyInjection;
 
 
 
@@ -9,8 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddApplication()
-    .AddInfrastructure(builder.Configuration)
-    .AddPersistence(builder.Configuration);
+    .AddInfrastructure(builder.Configuration);
 
 
 builder.Services.AddControllers();
@@ -22,6 +22,11 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.MapControllers();
 

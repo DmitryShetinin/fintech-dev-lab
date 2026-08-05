@@ -1,3 +1,4 @@
+using Application.Abstractions.Retry;
 using Application.Abstractions.Submission;
 using Application.Operations;
 using Application.Receipts;
@@ -15,7 +16,7 @@ public static class DependencyInjection
 
     services.AddScoped<IOperationService, OperationService>();
     services.AddScoped<IReceiptService, ReceiptService>();
-
+    services.AddSingleton<IRetryPolicy,ExponentialBackoffRetryPolicy>();
     services.AddScoped<ISubmissionProcessor, SubmissionProcessor>();
 
     return services;

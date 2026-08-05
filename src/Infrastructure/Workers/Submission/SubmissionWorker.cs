@@ -6,45 +6,56 @@ using Microsoft.Extensions.Hosting;
 
 namespace Infrastructure.Workers.Submission;
 
-public class SubmissionWorker : BackgroundService
+
+public sealed class SubmissionWorker : BackgroundService
 {
+    private readonly ISubmissionQueue _queue;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly WorkerOptions _options;
 
 
-  private readonly ISubmissionQueue _queue;
-
-  private readonly IServiceProvider _serviceProvider;
-  private readonly WorkerOptions _options;
-
-  public SubmissionWorker(ISubmissionQueue queue, IServiceProvider serviceProvider)
-  {
-    _queue = queue;
-    _serviceProvider = serviceProvider;
-  }
-
-  protected override async Task ExecuteAsync(
-   CancellationToken token)
-  {
-    var tasks = Enumerable.Range(0, _options.SubmissionWorkers)
-        .Select(_ => ConsumeAsync(token));
-
-    await Task.WhenAll(tasks);
-  }
-
-  private async Task ConsumeAsync(
-      CancellationToken token)
-  {
-    await foreach (var operation in _queue.Operations.Reader.ReadAllAsync(token))
+    public SubmissionWorker(
+        ISubmissionQueue queue,
+        IServiceProvider serviceProvider,
+        WorkerOptions options)
     {
-      using var scope = _serviceProvider.CreateScope();
-
-      var processor =
-          scope.ServiceProvider.GetRequiredService<ISubmissionProcessor>();
-
-      await processor.SubmitOperationAsync(
-          operation,
-          token);
+        _queue = queue;
+        _serviceProvider = serviceProvider;
+        _options = options;
     }
-  }
 
 
+    protected override async Task ExecuteAsync(
+        CancellationToken token)
+    {
+        var tasks =
+            Enumerable.Range(
+                0,
+                _options.SubmissionWorkers)
+            .Select(_ => ConsumeAsync(token));
+
+
+        await Task.WhenAll(tasks);
+    }
+
+
+    private async Task ConsumeAsync(
+        CancellationToken token)
+    {
+        await foreach(var operation in _queue.ReadAllAsync(token))
+        {
+            using var scope =
+                _serviceProvider.CreateScope();
+
+
+            var processor =
+                scope.ServiceProvider
+                    .GetRequiredService<ISubmissionProcessor>();
+
+
+            await processor.SubmitOperationAsync(
+                operation,
+                token);
+        }
+    }
 }
