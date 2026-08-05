@@ -1,12 +1,8 @@
-
-using System.Threading.Channels;
 using Core.Models;
 
 namespace Application.Abstractions.Queue;
 
-
-
-public interface ISubmissionQueue
+public interface IReceiptQueue
 {
     ValueTask EnqueueAsync(
         Operation operation,

@@ -1,12 +1,13 @@
-using Application.Common;
-using Application.Receipts.Requests;
-using Application.Receipts.Responses;
+ 
+ 
+using Core.Models;
+
 
 namespace Application.Abstractions.Receipt;
 
 public interface IReceiptProcessor
 {
-  Task<Result<ReceiptResponse>> ProcessAsync(
-    ReceiptRequest receipt,
-    CancellationToken token);
+    Task ProcessAsync(
+        Operation operation,
+        CancellationToken token);
 }

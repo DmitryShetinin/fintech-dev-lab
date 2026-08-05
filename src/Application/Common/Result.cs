@@ -1,3 +1,6 @@
+using Application.Common.Failures;
+
+
 namespace Application.Common;
 
 
@@ -7,19 +10,18 @@ public sealed class Result<T>
 
   public T? Value { get; }
 
-  public string? Error { get; }
+  public IFailure? Error { get; }
 
 
   private Result(
       bool isSuccess,
       T? value,
-      string? error)
+      IFailure? error)
   {
     IsSuccess = isSuccess;
     Value = value;
     Error = error;
   }
-
 
 
   public static Result<T> Success(T value)
@@ -31,13 +33,25 @@ public sealed class Result<T>
   }
 
 
-
   public static Result<T> Failure(
-      string error)
+      IFailure error)
   {
     return new Result<T>(
         false,
         default,
         error);
   }
+
+  public bool Is<TFailure>() 
+  where TFailure : class, IFailure
+  {
+    return Error is TFailure;
+  }
+
+  public TFailure? GetError<TFailure>() 
+  where TFailure : class, IFailure
+  {
+    return Error as TFailure;
+  }
+
 }

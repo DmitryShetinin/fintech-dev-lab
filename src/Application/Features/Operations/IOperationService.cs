@@ -26,9 +26,9 @@ public interface IOperationService
       string operationId,
       CancellationToken cancellationToken);
 
+Task<Result<OperationResponse>> SubmitAsync(
+    string operationId,
+    CancellationToken cancellationToken);
 
-
-  Task<Result<SubmitOperationResponse>> SubmitAsync(
-      string operationId,
-      CancellationToken cancellationToken);
+ 
 }

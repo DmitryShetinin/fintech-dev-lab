@@ -86,19 +86,30 @@ public sealed class OperationRepository : IOperationRepository
         .ToListAsync(cancellationToken);
   }
 
+public async Task<IReadOnlyList<Operation>> GetForSubmissionAsync(
+    DateTime now,
+    CancellationToken cancellationToken)
+{
+    var operationIds =
+        await _dbContext.PaymentAttempts
+            .Where(x =>
+                x.Type == PaymentAttemptType.Submission
+                &&
+                x.Status == AttemptStatus.FAILED
+                &&
+                x.NextRetryAt <= now)
+            .Select(x => x.OperationId)
+            .ToListAsync(cancellationToken);
 
-  public async Task<List<Operation>> GetProcessingAsync(
-      DateTime now,
-      CancellationToken cancellationToken)
-  {
+
+
     return await _dbContext.Operations
-        .AsNoTracking()
         .Where(x =>
-            x.Status == OperationStatus.Processing &&
-            (x.NextRetryAt == null || x.NextRetryAt <= now))
+            x.Status == OperationStatus.Created
+            ||
+            operationIds.Contains(x.Id))
         .ToListAsync(cancellationToken);
-  }
-
+}
 
 
 }

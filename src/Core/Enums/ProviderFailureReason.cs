@@ -2,17 +2,24 @@ namespace Core.Enums;
 
 
 
+
 public enum ProviderFailureReason
 {
-  None,
+    None,
 
-  Network,
+    Network,
 
-  Timeout,
+    Timeout,
 
-  Dns,
+    Dns,
 
-  Http,
+    HttpTransient,
 
+    HttpPermanent,
 
+    Unauthorized,
+
+    Validation,
+
+    Unknown
 }
