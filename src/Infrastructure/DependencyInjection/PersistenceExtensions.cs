@@ -11,27 +11,29 @@ public static class PersistenceExtensions
       this IServiceCollection services,
       IConfiguration configuration)
   {
-    services.Configure<DatabaseOptions>(
-        configuration.GetSection("Database"));
+ 
 
 
-    services.AddDbContext<AppDbContext>(
-        (sp, options) =>
-        {
-          var dbOptions =
-                  sp.GetRequiredService<IOptions<DatabaseOptions>>()
-                      .Value;
+   services.AddDbContext<AppDbContext>(
+    (sp, options) =>
+    {
+        var dbOptions =
+            sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
 
+        options.UseNpgsql(
+            configuration.GetConnectionString("Default"),
+            npgsql =>
+            {
+                npgsql.CommandTimeout(
+                    dbOptions.CommandTimeoutSeconds);
 
-          options.UseNpgsql(
-                  configuration.GetConnectionString("Default"),
-                  npgsql =>
-                  {
-                    npgsql.CommandTimeout(
-                            dbOptions.CommandTimeoutSeconds);
-                  });
-        });
-
+                if (dbOptions.EnableRetryOnFailure)
+                {
+                    npgsql.EnableRetryOnFailure(
+                        maxRetryCount: dbOptions.MaxRetryCount);
+                }
+            });
+    });
 
     return services;
   }

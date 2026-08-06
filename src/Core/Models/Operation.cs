@@ -1,5 +1,4 @@
 using Core.Enums;
-
 namespace Core.Models;
 
 
@@ -17,7 +16,6 @@ public class Operation
     public string Description { get; private set; } = null!;
 
 
-    public OperationStatus Status { get; private set; }
 
 
     public string? ProviderPaymentId { get; private set; }
@@ -66,80 +64,34 @@ public class Operation
             description);
     }
 
+    public OperationStatus Status { get; private set; }
+
+    public int RetryCount { get; private set; }
+
+    public DateTime? NextRetryAt { get; private set; }
 
 
+   
 
-    public OperationEvent StartProcessing(
-        OperationStateMachine stateMachine)
+
+    
+    public void ScheduleRetry(TimeSpan delay)
     {
-        return MoveTo(
-            OperationStatus.Processing,
-            stateMachine);
+        RetryCount++;
+
+        NextRetryAt = DateTime.UtcNow.Add(delay);
     }
 
-
-
-    public OperationEvent WaitForReceipt(
-        OperationStateMachine stateMachine,
-        string providerPaymentId)
+    public void ResetRetry()
     {
-        SetProviderPaymentId(providerPaymentId);
-
-        return MoveTo(
-            OperationStatus.WaitingForReceipt,
-            stateMachine);
+        RetryCount = 0;
+        NextRetryAt = null;
     }
 
+  
 
 
-
-    public void ApplyReceipt(
-        ProviderPaymentStatus status,
-        OperationStateMachine stateMachine)
-    {
-        switch (status)
-        {
-            case ProviderPaymentStatus.Succeeded:
-
-                Complete(stateMachine);
-
-                break;
-
-
-            case ProviderPaymentStatus.Failed:
-
-                Reject(stateMachine);
-
-                break;
-
-
-            case ProviderPaymentStatus.Pending:
-
-                break;
-        }
-    }
-
-
-
-
-    public OperationEvent Complete(
-        OperationStateMachine stateMachine)
-    {
-        return MoveTo(
-            OperationStatus.Completed,
-            stateMachine);
-    }
-
-
-
-    public OperationEvent Reject(
-        OperationStateMachine stateMachine)
-    {
-        return MoveTo(
-            OperationStatus.Rejected,
-            stateMachine);
-    }
-
+   
 
 
 
@@ -164,14 +116,10 @@ public class Operation
 
 
 
-    public OperationEvent MoveTo(
-        OperationStatus next,
-        OperationStateMachine stateMachine)
+    internal OperationEvent MoveTo(
+        OperationStatus next)
     {
-        stateMachine.Validate(
-            Status,
-            next);
-
+      
 
         var previous = Status;
 

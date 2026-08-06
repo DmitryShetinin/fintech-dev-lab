@@ -48,5 +48,34 @@ namespace Core.Models
             $"Transition {from} -> {to} is forbidden");
       }
     }
+
+    public OperationEvent Complete(Operation operation)
+    {
+        return operation.MoveTo(OperationStatus.Completed);
+    }
+
+    public OperationEvent Reject(Operation operation)
+    {
+        return operation.MoveTo(OperationStatus.Rejected);
+    }
+
+    public OperationEvent StartProcessing(Operation operation)
+    {
+        return operation.MoveTo(OperationStatus.Rejected);
+    
+    }
+
+    public OperationEvent WaitForReceipt(Operation operation,string providerPaymentId)
+    {
+          
+        operation.SetProviderPaymentId(providerPaymentId); 
+        return operation.MoveTo(OperationStatus.WaitingForReceipt);
+    }
+
+
+  
+
+
+
   }
 }
