@@ -90,26 +90,19 @@ public async Task<IReadOnlyList<Operation>> GetForSubmissionAsync(
     DateTime now,
     CancellationToken cancellationToken)
 {
-    var operationIds =
-        await _dbContext.PaymentAttempts
-            .Where(x =>
-                x.Type == PaymentAttemptType.Submission
-                &&
-                x.Status == AttemptStatus.FAILED
-                &&
-                x.NextRetryAt <= now)
-            .Select(x => x.OperationId)
-            .ToListAsync(cancellationToken);
-
-
-
     return await _dbContext.Operations
+        .AsNoTracking()
         .Where(x =>
             x.Status == OperationStatus.Created
             ||
-            operationIds.Contains(x.Id))
+            (
+                x.Status == OperationStatus.Processing
+                &&
+                x.NextRetryAt != null
+                &&
+                x.NextRetryAt <= now
+            ))
         .ToListAsync(cancellationToken);
 }
-
 
 }

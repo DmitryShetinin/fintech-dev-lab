@@ -70,17 +70,16 @@ public sealed class ReceiptService : IReceiptService
         {
             case ReceiptResult.COMPLETED:
 
-                operation.Complete(
-                    _stateMachine);
+            
+                _stateMachine.Complete(operation);
 
                 break;
 
 
             case ReceiptResult.REJECTED:
 
-                operation.Reject(
-                    _stateMachine);
-
+         
+                _stateMachine.Reject(operation);
                 break;
         }
 

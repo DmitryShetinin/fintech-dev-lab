@@ -4,16 +4,13 @@ namespace Application.Interface
 {
   public interface IUnitOfWork
   {
-    Task SaveChangesAsync(
+    Task ExecuteInTransactionAsync(
+        Func<CancellationToken, Task> action,
         CancellationToken cancellationToken);
 
     Task BeginTransactionAsync(
         CancellationToken cancellationToken);
 
-    Task CommitTransactionAsync(
-        CancellationToken cancellationToken);
-
-    Task RollbackTransactionAsync(
-        CancellationToken cancellationToken);
+     
   }
 }

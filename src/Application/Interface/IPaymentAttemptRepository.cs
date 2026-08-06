@@ -26,8 +26,5 @@ public interface IPaymentAttemptRepository
         PaymentAttemptType type,
         CancellationToken cancellationToken);
 
-     Task<IReadOnlyList<PaymentAttempt>> GetReadyForRetryAsync(
-        PaymentAttemptType type,
-        DateTime now,
-        CancellationToken cancellationToken);
+      
 }

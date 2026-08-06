@@ -40,135 +40,84 @@ public class ReceiptProcessor : IReceiptProcessor
 
 
     public async Task ProcessAsync(
-        Operation operation,
-        CancellationToken token)
+      Operation operation,
+      CancellationToken token)
     {
         var provider =
-            _providerFactory.Get(
-                operation.Provider);
+            _providerFactory.Get(operation.Provider);
+
+        var attempt = await CreateAttemptAsync(operation, token);
 
 
+        // =========================
+        // 1. Сохраняем попытку
+        // =========================
 
-        var attemptNumber =
-            await _paymentAttemptRepository
-                .GetNextAttemptNumberAsync(
-                    operation.Id,
-                    PaymentAttemptType.ReceiptPolling,
-                    token);
+        await _unitOfWork.ExecuteInTransactionAsync(
+        async ct =>
+        {
+            await _paymentAttemptRepository.AddAsync(
+                attempt,
+                ct);
+        },
+        token);
 
-
-
-        var attempt =
-            PaymentAttempt.Start(
-                operation.Id,
-                attemptNumber,
-                PaymentAttemptType.ReceiptPolling);
-
-
-
-        await _paymentAttemptRepository.AddAsync(
-            attempt,
-            token);
-
-
-
-        await _unitOfWork.SaveChangesAsync(
-            token);
-
-
+        // =========================
+        // 2. Внешний HTTP вызов
+        // =========================
 
         var result =
             await provider.GetPaymentStatusAsync(
                 operation.ProviderPaymentId!,
                 token);
 
+        // =========================
+        // 3. Обрабатываем результат
+        // =========================
 
-
-        if (!result.IsSuccess)
+        await _unitOfWork.ExecuteInTransactionAsync(
+        async ct =>
         {
-            var failure =
-                result.GetError<ProviderFailure>();
+            if (!result.IsSuccess)
+            {
+                var failure =
+                    result.GetError<ProviderFailure>()!;
 
-
-            await HandleFailure(
-                attempt,
-                failure!,
-                token);
-
-
-            return;
-        }
-
-
-
-        var response =
-            result.Value!;
-
-
-
-        switch (response.Status)
-        {
-            case ProviderPaymentStatus.Succeeded:
-
-                operation.Complete(
-                    _stateMachine);
-
-
-                attempt.Complete();
-
-                break;
-
-
-
-            case ProviderPaymentStatus.Failed:
-
-                operation.Reject(
-                    _stateMachine);
-
-
-                attempt.Complete();
-
-                break;
-
-
-
-            case ProviderPaymentStatus.Pending:
-
-                ScheduleRetry(
-                    attempt);
-
-                break;
-        }
-
-
-
-        await _unitOfWork.SaveChangesAsync(
-            token);
+                HandleFailure(
+                    attempt, 
+                    failure, 
+                    operation);
+            }
+            else
+            {
+                HandleProviderResponse(
+                    operation,
+                    attempt,
+                    result.Value!);
+            }
+        },
+        token);
     }
 
 
 
 
-
-    private async Task HandleFailure(
+    private void HandleFailure(
         PaymentAttempt attempt,
-        ProviderFailure failure,
-        CancellationToken token)
+        ProviderFailure failure, Operation operation)
     {
-        attempt.Fail(
-            failure.Reason,
-            failure.Message);
-
+        
+        attempt.Fail(failure.Reason,failure.Message);
 
 
         if (!_retryPolicy.CanRetry(
                 failure.Reason,
                 attempt.AttemptNumber))
         {
-            await _unitOfWork.SaveChangesAsync(
-                token);
 
-
+  
+         
+            _stateMachine.Reject(operation); 
             _logger.LogError(
                 "Receipt polling permanently failed. Operation {OperationId}. Reason {Reason}",
                 attempt.OperationId,
@@ -185,15 +134,11 @@ public class ReceiptProcessor : IReceiptProcessor
                 attempt.AttemptNumber);
 
 
-
-        attempt.ScheduleRetry(
-                    DateTime.UtcNow,
-                    delay);
+        
+        operation.ScheduleRetry(delay);
 
 
-
-        await _unitOfWork.SaveChangesAsync(
-            token);
+ 
 
 
 
@@ -204,18 +149,62 @@ public class ReceiptProcessor : IReceiptProcessor
     }
 
 
-
-
-    private void ScheduleRetry(
-        PaymentAttempt attempt)
+    private async Task<PaymentAttempt> CreateAttemptAsync(Operation operation, CancellationToken token)
     {
-        var delay =
-            _retryPolicy.GetRetryDelay(
-                attempt.AttemptNumber);
 
+        var attemptNumber =
+            await _paymentAttemptRepository.GetNextAttemptNumberAsync(
+                operation.Id,
+                PaymentAttemptType.ReceiptPolling,
+                token);
 
-        attempt.ScheduleRetry(
-     DateTime.UtcNow,
-     delay);
+        var attempt =
+            PaymentAttempt.Start(
+                operation.Id,
+                attemptNumber,
+                PaymentAttemptType.ReceiptPolling);
+
+        return attempt;
     }
+
+    private void HandleProviderResponse(Operation operation,
+                                              PaymentAttempt attempt,
+                                              ProviderPaymentStatusResponse response)
+    {
+
+        switch (response.Status)
+        {
+            case ProviderPaymentStatus.Succeeded:
+
+                
+            
+                _stateMachine.Complete(operation);
+                attempt.Complete();
+
+                break;
+
+            case ProviderPaymentStatus.Failed:
+
+            
+                _stateMachine.Reject(operation);
+                attempt.Complete();
+
+                break;
+
+            case ProviderPaymentStatus.Pending:
+
+                var delay =
+                _retryPolicy.GetRetryDelay(
+                    attempt.AttemptNumber);
+
+                operation.ScheduleRetry(delay);
+ 
+                break;
+        }
+
+
+
+    }
+
+
 }

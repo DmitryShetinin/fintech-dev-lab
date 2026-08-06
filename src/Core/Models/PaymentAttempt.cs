@@ -47,15 +47,7 @@ public class PaymentAttempt
 
 
 
-    // Retry state
 
-    public int RetryCount { get; private set; }
-
-
-    public DateTime? LastAttemptAt { get; private set; }
-
-
-    public DateTime? NextRetryAt { get; private set; }
 
 
 
@@ -116,8 +108,6 @@ public class PaymentAttempt
         Status = AttemptStatus.SUCCESS;
 
         FinishedAt = DateTime.UtcNow;
-
-        NextRetryAt = null;
     }
 
 
@@ -137,30 +127,7 @@ public class PaymentAttempt
 
 
 
-    public void ScheduleRetry(
-        DateTime now,
-        TimeSpan delay)
-    {
-        RetryCount++;
-
-        LastAttemptAt = now;
-
-        NextRetryAt = now.Add(delay);
-
-        Status = AttemptStatus.Processing;
-
-        FinishedAt = null;
-    }
-
-
-
-    public bool IsReadyForRetry(
-        DateTime now)
-    {
-        return Status == AttemptStatus.Processing &&
-               NextRetryAt.HasValue &&
-               NextRetryAt <= now;
-    }
+    
 }
 
 

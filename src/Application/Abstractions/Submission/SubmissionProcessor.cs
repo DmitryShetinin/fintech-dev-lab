@@ -44,86 +44,94 @@ public class SubmissionProcessor : ISubmissionProcessor
 
     public async Task SubmitOperationAsync(
         Operation operation,
-        CancellationToken stoppingToken)
+        CancellationToken token)
     {
         var provider =
             _providerFactory.Get(operation.Provider);
 
 
 
-        var attemptNumber =
-            await _paymentAttemptRepository.GetNextAttemptNumberAsync(
-                operation.Id,
-                PaymentAttemptType.Submission,
-                stoppingToken);
+       
 
 
+        var attempt = await CreateAttemptAsync(operation, token); 
+    
 
-        var attempt = PaymentAttempt.Start(
-            operation.Id,
-            attemptNumber,
-            PaymentAttemptType.Submission);
+        await _unitOfWork.ExecuteInTransactionAsync(
+        async ct =>
+        {
+            await _paymentAttemptRepository.AddAsync(
+                attempt,
+                ct);
+        },
+        token);
 
-
-
-        await _paymentAttemptRepository.AddAsync(
-            attempt,
-            stoppingToken);
-
-
-        await _unitOfWork.SaveChangesAsync(
-            stoppingToken);
-
+ 
+ 
 
 
         var result =
             await provider.CreatePaymentAsync(
                 operation.ToProviderRequest(),
-                stoppingToken);
+                token);
 
 
 
-        if (!result.IsSuccess)
+        await _unitOfWork.ExecuteInTransactionAsync(
+        async ct =>
         {
-            var failure =
+            if (!result.IsSuccess)
+            {
+                  var failure =
                 result.GetError<ProviderFailure>();
 
-
-            await HandleFailure(
-                attempt,
-                failure!,
-                stoppingToken);
-
-
-            return;
-        }
-
-
-
-        var response =
-            result.Value!;
-
-
-
-        HandleProviderAccepted(
-            operation,
-            attempt,
-            response);
+                if (failure is null)
+                    throw new InvalidOperationException("Provider returned failure but error object is missing.");
+                
+                await HandleFailure(
+                    attempt,
+                    failure,
+                    operation);
+            }
+            else
+            {
+                var response = result.Value!.ProviderPaymentId!;
+                _stateMachine.WaitForReceipt(operation, response);
+                attempt.MarkProviderAccepted(
+                    response);
+            }
+        },
+        token);
+ 
 
 
-
-        await _unitOfWork.SaveChangesAsync(
-            stoppingToken);
+ 
     }
 
 
 
+   private async Task<PaymentAttempt> CreateAttemptAsync(Operation operation, CancellationToken token)
+    {
 
+        var attemptNumber =
+            await _paymentAttemptRepository.GetNextAttemptNumberAsync(
+                operation.Id,
+                PaymentAttemptType.ReceiptPolling,
+                token);
+
+        var attempt =
+            PaymentAttempt.Start(
+                operation.Id,
+                attemptNumber,
+                PaymentAttemptType.ReceiptPolling);
+
+        return attempt;
+    }
 
     private async Task HandleFailure(
         PaymentAttempt attempt,
-        ProviderFailure failure,
-        CancellationToken ct)
+        ProviderFailure failure, 
+        Operation operation)
     {
         attempt.Fail(
             failure.Reason,
@@ -135,8 +143,7 @@ public class SubmissionProcessor : ISubmissionProcessor
             failure.Reason,
             attempt.AttemptNumber))
         {
-            await _unitOfWork.SaveChangesAsync(ct);
-
+    
 
             _logger.LogError(
                 "Submission failed permanently. Operation {OperationId}. Reason {Reason}",
@@ -155,13 +162,11 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
 
-        attempt.ScheduleRetry(
-                DateTime.UtcNow,
-                delay);
+        operation.ScheduleRetry(delay);
 
 
 
-        await _unitOfWork.SaveChangesAsync(ct);
+    
 
 
 
@@ -176,18 +181,5 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
 
-    private void HandleProviderAccepted(
-        Operation operation,
-        PaymentAttempt attempt,
-        ProviderResponse response)
-    {
-        operation.WaitForReceipt(
-            _stateMachine,
-            response.ProviderPaymentId!);
-
-
-
-        attempt.MarkProviderAccepted(
-            response.ProviderPaymentId!);
-    }
+ 
 }

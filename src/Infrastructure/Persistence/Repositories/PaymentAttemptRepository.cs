@@ -69,16 +69,5 @@ public class PaymentAttemptRepository
         return (lastAttempt ?? 0) + 1;
     }
 
-    public async Task<IReadOnlyList<PaymentAttempt>> GetReadyForRetryAsync(
-    PaymentAttemptType type,
-    DateTime now,
-    CancellationToken cancellationToken)
-{
-    return await _context.PaymentAttempts
-        .Where(x =>
-            x.Type == type &&
-            x.Status == AttemptStatus.FAILED &&
-            x.NextRetryAt <= now)
-        .ToListAsync(cancellationToken);
-}
+ 
 }
