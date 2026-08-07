@@ -1,4 +1,6 @@
- 
+
+using Application.Abstractions.Persistence;
+using Application.Abstractions.Telemetry;
 using Application.Common;
 using Application.Common.Failures;
 using Application.Interface;
@@ -6,22 +8,29 @@ using Application.Receipts;
 using Application.Receipts.Requests;
 using Core.Enums;
 using Core.Models;
+using Microsoft.Extensions.Logging;
 
 public sealed class ReceiptService : IReceiptService
 {
     private readonly IOperationRepository _operationRepository;
+    
     private readonly IUnitOfWork _unitOfWork;
     private readonly OperationStateMachine _stateMachine;
-
+    private readonly ILogger<ReceiptService> _logger;
+    private readonly IOperationMetrics _operationMetrics; 
 
     public ReceiptService(
         IOperationRepository operationRepository,
         IUnitOfWork unitOfWork,
-        OperationStateMachine stateMachine)
+        OperationStateMachine stateMachine, 
+        ILogger<ReceiptService> logger, 
+        IOperationMetrics operationMetrics)
     {
         _operationRepository = operationRepository;
         _unitOfWork = unitOfWork;
         _stateMachine = stateMachine;
+        _logger = logger;
+        _operationMetrics = operationMetrics; 
     }
 
 
@@ -43,17 +52,6 @@ public sealed class ReceiptService : IReceiptService
         }
 
 
-        if (operation.ProviderPaymentId is not null &&
-            operation.ProviderPaymentId != request.ProviderPaymentId)
-        {
-            return Result<bool>.Failure(
-                new ApplicationFailure(
-                    "ProviderPaymentId mismatch"));
-        }
-
-
-        operation.SetProviderPaymentId(
-            request.ProviderPaymentId);
 
 
 
@@ -61,32 +59,39 @@ public sealed class ReceiptService : IReceiptService
         if (operation.Status == OperationStatus.Completed ||
             operation.Status == OperationStatus.Rejected)
         {
+            _logger.LogInformation(
+                "Duplicate receipt ignored. Operation {OperationId}",
+                operation.Id);
             return Result<bool>.Success(true);
         }
 
 
 
-        switch (request.Result)
-        {
-            case ReceiptResult.COMPLETED:
+        await _unitOfWork.ExecuteInTransactionAsync(
+      ct =>
+      {
+          operation.SetProviderPaymentId(
+              request.ProviderPaymentId);
 
-            
-                _stateMachine.Complete(operation);
+          switch (request.Result)
+          {
+              case ReceiptResult.COMPLETED:
+                  _stateMachine.Complete(operation);
+                  _operationMetrics.AddOperationCompleted(); 
+                  break;
 
-                break;
+              case ReceiptResult.REJECTED:
+                  _stateMachine.Reject(operation);
+                  _operationMetrics.AddOperationRejected(); 
+                  break;
+          }
+
+          return Task.CompletedTask;
+      },
+      cancellationToken);
 
 
-            case ReceiptResult.REJECTED:
 
-         
-                _stateMachine.Reject(operation);
-                break;
-        }
-
-
-
-        await _unitOfWork.SaveChangesAsync(
-            cancellationToken);
 
 
         return Result<bool>.Success(true);

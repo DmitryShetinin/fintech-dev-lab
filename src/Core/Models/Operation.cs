@@ -1,3 +1,4 @@
+using Core.DomainEvents;
 using Core.Enums;
 namespace Core.Models;
 
@@ -38,15 +39,27 @@ public class Operation
         string operationId,
         decimal amount,
         string currency,
-        string description)
+        string description,
+        PaymentProvider provider)
     {
         Id = operationId;
 
         Amount = amount;
         Currency = currency;
         Description = description;
-
+        ProviderPaymentId = provider.ToString();
+        Provider = provider;
         Status = OperationStatus.Created;
+
+
+        Raise(
+            new OperationStateChangedEvent(
+                Id,
+                null,
+                OperationStatus.Created,
+                "operation  created",
+                DateTime.UtcNow));
+
     }
 
 
@@ -55,13 +68,15 @@ public class Operation
         string operationId,
         decimal amount,
         string currency,
-        string description)
+        string description, 
+        PaymentProvider provider)
     {
         return new Operation(
             operationId,
             amount,
             currency,
-            description);
+            description, 
+            provider);
     }
 
     public OperationStatus Status { get; private set; }
@@ -71,10 +86,10 @@ public class Operation
     public DateTime? NextRetryAt { get; private set; }
 
 
-   
 
 
-    
+
+
     public void ScheduleRetry(TimeSpan delay)
     {
         RetryCount++;
@@ -88,10 +103,10 @@ public class Operation
         NextRetryAt = null;
     }
 
-  
 
 
-   
+
+
 
 
 
@@ -114,23 +129,40 @@ public class Operation
     }
 
 
+    private readonly List<IDomainEvent> _domainEvents = [];
 
+    public IReadOnlyCollection<IDomainEvent> DomainEvents
+        => _domainEvents.AsReadOnly();
 
-    internal OperationEvent MoveTo(
+    private void Raise(IDomainEvent domainEvent)
+    {
+        _domainEvents.Add(domainEvent);
+    }
+
+    public void ClearDomainEvents()
+    {
+        _domainEvents.Clear();
+    }
+
+    internal void MoveTo(
         OperationStatus next)
     {
-      
+
 
         var previous = Status;
 
 
         Status = next;
+        var domainEvent =
+            new OperationStateChangedEvent(
+                Id,
+                previous,
+                next,
+                $"Operation moved {previous} -> {next}",
+                DateTime.UtcNow);
+
+        Raise(domainEvent);
 
 
-        return OperationEvent.Create(
-            Id,
-            previous,
-            next,
-            $"Operation moved {previous} -> {next}");
     }
 }

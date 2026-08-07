@@ -1,3 +1,5 @@
+using Core.Enums;
+
 namespace Application.Operations.Requests;
 
 public sealed class CreateOperationRequest
@@ -9,4 +11,5 @@ public sealed class CreateOperationRequest
   public string Currency { get; init; } = default!;
 
   public string Description { get; init; } = default!;
+  public PaymentProvider Provider { get; set; }
 }

@@ -1,6 +1,7 @@
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Providers;
 using Application.Abstractions.Retry;
+using Application.Abstractions.Telemetry;
 using Application.Common.Failures;
 using Application.Extensions;
 using Application.Interface;
@@ -20,8 +21,7 @@ public class SubmissionProcessor : ISubmissionProcessor
     private readonly IUnitOfWork _unitOfWork;
     private readonly OperationStateMachine _stateMachine;
     private readonly ILogger<SubmissionProcessor> _logger;
-
-
+    private readonly IOperationMetrics _operationMetrics;
 
     public SubmissionProcessor(
         IPaymentAttemptRepository attemptRepository,
@@ -29,7 +29,8 @@ public class SubmissionProcessor : ISubmissionProcessor
         IRetryPolicy retryPolicy,
         IUnitOfWork unitOfWork,
         OperationStateMachine stateMachine,
-        ILogger<SubmissionProcessor> logger)
+        ILogger<SubmissionProcessor> logger, 
+        IOperationMetrics operationMetrics)
     {
         _paymentAttemptRepository = attemptRepository;
         _providerFactory = providerFactory;
@@ -37,6 +38,7 @@ public class SubmissionProcessor : ISubmissionProcessor
         _unitOfWork = unitOfWork;
         _stateMachine = stateMachine;
         _logger = logger;
+        _operationMetrics = operationMetrics;
     }
 
 
@@ -51,11 +53,11 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
 
-       
 
 
-        var attempt = await CreateAttemptAsync(operation, token); 
-    
+
+        var attempt = await CreateAttemptAsync(operation, token);
+
 
         await _unitOfWork.ExecuteInTransactionAsync(
         async ct =>
@@ -66,8 +68,8 @@ public class SubmissionProcessor : ISubmissionProcessor
         },
         token);
 
- 
- 
+
+
 
 
         var result =
@@ -82,13 +84,13 @@ public class SubmissionProcessor : ISubmissionProcessor
         {
             if (!result.IsSuccess)
             {
-                  var failure =
-                result.GetError<ProviderFailure>();
+                var failure =
+              result.GetError<ProviderFailure>();
 
                 if (failure is null)
                     throw new InvalidOperationException("Provider returned failure but error object is missing.");
-                
-                await HandleFailure(
+
+                HandleFailure(
                     attempt,
                     failure,
                     operation);
@@ -102,15 +104,15 @@ public class SubmissionProcessor : ISubmissionProcessor
             }
         },
         token);
- 
 
 
- 
+
+
     }
 
 
 
-   private async Task<PaymentAttempt> CreateAttemptAsync(Operation operation, CancellationToken token)
+    private async Task<PaymentAttempt> CreateAttemptAsync(Operation operation, CancellationToken token)
     {
 
         var attemptNumber =
@@ -128,9 +130,9 @@ public class SubmissionProcessor : ISubmissionProcessor
         return attempt;
     }
 
-    private async Task HandleFailure(
+    private void HandleFailure(
         PaymentAttempt attempt,
-        ProviderFailure failure, 
+        ProviderFailure failure,
         Operation operation)
     {
         attempt.Fail(
@@ -143,7 +145,7 @@ public class SubmissionProcessor : ISubmissionProcessor
             failure.Reason,
             attempt.AttemptNumber))
         {
-    
+
 
             _logger.LogError(
                 "Submission failed permanently. Operation {OperationId}. Reason {Reason}",
@@ -163,10 +165,10 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
         operation.ScheduleRetry(delay);
+        _operationMetrics.AddRetryOccurred();
 
 
 
-    
 
 
 
@@ -181,5 +183,5 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
 
- 
+
 }

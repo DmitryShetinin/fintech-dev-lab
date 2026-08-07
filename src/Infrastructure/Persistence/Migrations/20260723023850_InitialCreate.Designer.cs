@@ -63,7 +63,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("Operations", (string)null);
                 });
 
-            modelBuilder.Entity("Core.Models.OperationEvent", b =>
+            modelBuilder.Entity("Core.Models.OperationHistory", b =>
                 {
                     b.Property<long>("EventId")
                         .ValueGeneratedOnAdd()
@@ -169,7 +169,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("OutboxMessages");
                 });
 
-            modelBuilder.Entity("Core.Models.OperationEvent", b =>
+            modelBuilder.Entity("Core.Models.OperationHistory", b =>
                 {
                     b.HasOne("Core.Models.Operation", null)
                         .WithMany("Events")

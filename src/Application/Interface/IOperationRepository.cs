@@ -21,15 +21,16 @@ public interface IOperationRepository
 
 
   Task AddEventAsync(
-        OperationEvent operationEvent,
+        OperationHistory operationEvent,
         CancellationToken cancellationToken);
 
+ 
 
-  Task<bool> ExistsAsync(
-      string operationId,
-      CancellationToken cancellationToken);
 
-  Task<IReadOnlyList<OperationEvent>> GetEventsAsync(
+  Task<IReadOnlyList<Operation>> GetReadyForRetryAsync(CancellationToken cancellationToken);
+
+
+  Task<IReadOnlyList<OperationHistory>> GetEventsAsync(
       string operationId,
       CancellationToken cancellationToken);
 

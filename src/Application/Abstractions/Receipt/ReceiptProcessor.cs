@@ -6,6 +6,7 @@ using Application.Interface;
 using Core.Models;
 using Microsoft.Extensions.Logging;
 using Core.Enums;
+using Application.Abstractions.Telemetry;
 
 
 namespace Application.Abstractions.Receipt;
@@ -19,7 +20,7 @@ public class ReceiptProcessor : IReceiptProcessor
     private readonly OperationStateMachine _stateMachine;
     private readonly IRetryPolicy _retryPolicy;
     private readonly ILogger<ReceiptProcessor> _logger;
-
+        private readonly IOperationMetrics _operationMetrics; 
 
     public ReceiptProcessor(
         IPaymentAttemptRepository paymentAttemptRepository,
@@ -27,7 +28,8 @@ public class ReceiptProcessor : IReceiptProcessor
         IUnitOfWork unitOfWork,
         OperationStateMachine stateMachine,
         IRetryPolicy retryPolicy,
-        ILogger<ReceiptProcessor> logger)
+        ILogger<ReceiptProcessor> logger, 
+        IOperationMetrics operationMetrics)
     {
         _paymentAttemptRepository = paymentAttemptRepository;
         _providerFactory = providerFactory;
@@ -35,6 +37,7 @@ public class ReceiptProcessor : IReceiptProcessor
         _stateMachine = stateMachine;
         _retryPolicy = retryPolicy;
         _logger = logger;
+        _operationMetrics = operationMetrics;
     }
 
 
@@ -136,7 +139,7 @@ public class ReceiptProcessor : IReceiptProcessor
 
         
         operation.ScheduleRetry(delay);
-
+_operationMetrics.AddRetryOccurred();
 
  
 

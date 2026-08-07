@@ -9,7 +9,7 @@ public static class OperationEventMappingExtensions
 {
 
   public static OperationEventResponse ToResponse(
-      this OperationEvent operationEvent)
+      this OperationHistory operationEvent)
   {
     return new OperationEventResponse
     {

@@ -12,11 +12,16 @@ public sealed class OpenTelemetryOperationMetrics
   private readonly Counter<long> _completedCounter;
   private readonly Counter<long> _rejectedCounter;
   private readonly Counter<long> _retryCounter;
+  private readonly Counter<long> _createdCounter;
 
 
   public OpenTelemetryOperationMetrics()
   {
     _completedCounter =
+        Meter.CreateCounter<long>(
+            "operations.completed");
+
+    _createdCounter =
         Meter.CreateCounter<long>(
             "operations.completed");
 
@@ -30,19 +35,23 @@ public sealed class OpenTelemetryOperationMetrics
   }
 
 
-  public void OperationCompleted()
+  public void AddOperationCompleted()
   {
     _completedCounter.Add(1);
   }
 
+  public void AddOperationCreated()
+  {
+    _createdCounter.Add(1);
+  }
 
-  public void OperationRejected()
+  public void AddOperationRejected()
   {
     _rejectedCounter.Add(1);
   }
 
 
-  public void RetryOccurred()
+  public void AddRetryOccurred()
   {
     _retryCounter.Add(1);
   }

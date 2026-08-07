@@ -8,6 +8,9 @@ using Application.Operations.Responses;
 using Core.Enums;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Application.Abstractions.Telemetry;
+using Microsoft.Extensions.Logging;
+using Application.Abstractions.Persistence;
 
 
 namespace Application.Operations;
@@ -18,66 +21,72 @@ public class OperationService : IOperationService
     private readonly IOperationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly OperationStateMachine _stateMachine;
+     private readonly IOperationEventRepository _operationEventRepository;
+
     private readonly ISubmissionQueue _submissionQueue;
 
+    private readonly IOperationMetrics _operationMetrics;
+    private readonly ILogger _logger;
 
     public OperationService(
         IOperationRepository repository,
         IUnitOfWork unitOfWork,
         OperationStateMachine stateMachine,
-        ISubmissionQueue submissionQueue)
+        ISubmissionQueue submissionQueue,
+        IOperationMetrics operationMetrics, 
+        ILogger<OperationService> logger,  
+        IOperationEventRepository operationEventRepository)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
         _stateMachine = stateMachine;
         _submissionQueue = submissionQueue;
+        _operationMetrics = operationMetrics; 
+        _logger = logger;
+        _operationEventRepository = operationEventRepository; 
     }
 
 
 
     public async Task<Result<OperationResponse>> CreateAsync(
-        CreateOperationRequest request,
-        CancellationToken cancellationToken)
+    CreateOperationRequest request,
+    CancellationToken cancellationToken)
     {
-        var exists =
-            await _repository.ExistsAsync(
-                request.OperationId,
-                cancellationToken);
-
-
-        if (exists)
-        {
-            return Result<OperationResponse>.Failure(
-                new ApplicationFailure(
-                    $"Operation {request.OperationId} already exists"));
-        }
-
-
         var operation =
             Operation.Create(
                 request.OperationId,
                 request.Amount,
                 request.Currency,
-                request.Description);
+                request.Description, 
+                request.Provider);
 
+
+        _operationMetrics.AddOperationCreated();
 
         try
         {
-            await _repository.AddAsync(
-                operation,
-                cancellationToken);
-
-
-            await _unitOfWork.SaveChangesAsync(
+            await _unitOfWork.ExecuteInTransactionAsync(
+                async ct =>
+                {
+                    await _repository.AddAsync(
+                        operation,
+                        ct);
+                
+                },
                 cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
+                _logger.LogError(
+                ex,
+                "Database error while creating operation {OperationId}",
+                request.OperationId);
+
+
             return Result<OperationResponse>.Failure(
                 new ApplicationFailure(
-                    $"Operation {request.OperationId} already exists"));
+                    "Database error"));
         }
-
 
         return Result<OperationResponse>.Success(
             operation.ToResponse());
@@ -114,25 +123,21 @@ public class OperationService : IOperationService
         }
 
 
+        var response =
+        await _unitOfWork.ExecuteInTransactionAsync(
+        async ct =>
+        {
+            _stateMachine.StartProcessing(operation);
 
-        operation.StartProcessing(
-            _stateMachine);
+            await _submissionQueue.EnqueueAsync(
+                operation,
+                ct);
 
+            return operation.ToResponse();
+        },
+        cancellationToken);
 
-
-        await _unitOfWork.SaveChangesAsync(
-            cancellationToken);
-
-
-
-        await _submissionQueue.EnqueueAsync(
-            operation,
-            cancellationToken);
-
-
-
-        return Result<OperationResponse>.Success(
-            operation.ToResponse());
+        return Result<OperationResponse>.Success(response);
     }
 
 

@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Configurations;
 
-public sealed class OperationEventConfiguration : IEntityTypeConfiguration<OperationEvent>
+public sealed class OperationEventConfiguration : IEntityTypeConfiguration<OperationHistory>
 {
-  public void Configure(EntityTypeBuilder<OperationEvent> builder)
+  public void Configure(EntityTypeBuilder<OperationHistory> builder)
   {
     builder.ToTable("OperationEvents");
 
