@@ -4,8 +4,10 @@ namespace Application.Abstractions.Telemetry;
 
 public interface IOperationMetrics
 {
-  void OperationCompleted();
-  void RetryOccurred();
-  void OperationRejected();
+  void AddOperationCompleted();
+  void AddRetryOccurred();
+  void AddOperationRejected();
+
+  void AddOperationCreated();
 
 }

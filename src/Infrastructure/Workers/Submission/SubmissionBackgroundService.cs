@@ -5,6 +5,7 @@ using Core.Enums;
 using Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 
 namespace Infrastructure.BackgroundServices;
@@ -13,12 +14,15 @@ namespace Infrastructure.BackgroundServices;
 public sealed class SubmissionBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-
+    private readonly ILogger _logger;
 
     public SubmissionBackgroundService(
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        ILogger logger
+        )
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
 
@@ -31,11 +35,7 @@ public sealed class SubmissionBackgroundService : BackgroundService
                 _serviceProvider.CreateScope();
 
 
-            var attemptRepository =
-                scope.ServiceProvider
-                    .GetRequiredService<IPaymentAttemptRepository>();
-
-
+    
             var operationRepository =
                 scope.ServiceProvider
                     .GetRequiredService<IOperationRepository>();
@@ -47,25 +47,17 @@ public sealed class SubmissionBackgroundService : BackgroundService
 
 
 
-            var attempts =
-                await attemptRepository.GetReadyForRetryAsync(
-                    PaymentAttemptType.Submission,
-                    DateTime.UtcNow,
-                    token);
+            
 
+            var operations =
+                    await operationRepository.GetReadyForRetryAsync(token);
 
-
-            foreach(var attempt in attempts)
+            foreach(var operation in operations)
             {
-                var operation =
-                    await operationRepository.GetByIdAsync(
-                        attempt.OperationId,
-                        token);
-
-
-                if (operation is null)
-                    continue;
-
+                
+                _logger.LogInformation(
+                "Retrying operation {OperationId}",
+                operation.Id);
 
                 await queue.EnqueueAsync(
                     operation,
@@ -75,7 +67,7 @@ public sealed class SubmissionBackgroundService : BackgroundService
 
 
             await Task.Delay(
-                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(5),
                 token);
         }
     }

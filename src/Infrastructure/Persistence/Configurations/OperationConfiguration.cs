@@ -21,7 +21,9 @@ public sealed class OperationConfiguration : IEntityTypeConfiguration<Operation>
     // Version
     builder.Property(x => x.Version).IsConcurrencyToken();
 
-
+    builder.Property(x => x.Provider)
+    .HasConversion<int>();
+    
     // Properties
     builder.Property(x => x.Id)
         .HasMaxLength(100)

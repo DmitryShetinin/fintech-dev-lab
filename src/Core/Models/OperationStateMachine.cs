@@ -1,39 +1,39 @@
 using Core.Enums;
 
-namespace Core.Models
+namespace Core.Models;
+
+public class OperationStateMachine
 {
-  public class OperationStateMachine
-  {
     private static readonly Dictionary<
         OperationStatus,
         HashSet<OperationStatus>>
         Transitions =
     new()
     {
-        {
-            OperationStatus.Created,
-            [
-                OperationStatus.Processing
-            ]
-        },
+    {
+        OperationStatus.Created,
+        [
+            OperationStatus.Processing
+        ]
+    },
 
-        {
-            OperationStatus.Processing,
-            [
-                OperationStatus.Completed,
-                OperationStatus.Rejected
-            ]
-        },
-
-        {
+    {
+        OperationStatus.Processing,
+        [
             OperationStatus.Completed,
-            []
-        },
+            OperationStatus.Rejected
+        ]
+    },
 
-        {
-            OperationStatus.Rejected,
-            []
-        }
+    {
+        OperationStatus.Completed,
+        []
+    },
+
+    {
+        OperationStatus.Rejected,
+        []
+    }
     };
 
 
@@ -41,41 +41,58 @@ namespace Core.Models
         OperationStatus from,
         OperationStatus to)
     {
-      if (!Transitions[from]
-          .Contains(to))
-      {
-        throw new InvalidOperationException(
-            $"Transition {from} -> {to} is forbidden");
-      }
+        if (!Transitions[from]
+            .Contains(to))
+        {
+            throw new InvalidOperationException(
+                $"Transition {from} -> {to} is forbidden");
+        }
     }
 
-    public OperationEvent Complete(Operation operation)
+    public void Complete(Operation operation)
     {
-        return operation.MoveTo(OperationStatus.Completed);
+        Validate(
+            operation.Status,
+            OperationStatus.Completed);
+
+        operation.MoveTo(OperationStatus.Completed);
     }
 
-    public OperationEvent Reject(Operation operation)
+    public void Reject(Operation operation)
     {
-        return operation.MoveTo(OperationStatus.Rejected);
+        Validate(
+            operation.Status,
+            OperationStatus.Rejected);
+
+        operation.MoveTo(OperationStatus.Rejected);
     }
 
-    public OperationEvent StartProcessing(Operation operation)
+    public void StartProcessing(Operation operation)
     {
-        return operation.MoveTo(OperationStatus.Rejected);
-    
+        Validate(
+            operation.Status,
+            OperationStatus.Processing);
+
+        operation.MoveTo(OperationStatus.Processing);
     }
 
-    public OperationEvent WaitForReceipt(Operation operation,string providerPaymentId)
+    public void WaitForReceipt(
+        Operation operation,
+        string providerPaymentId)
     {
-          
-        operation.SetProviderPaymentId(providerPaymentId); 
-        return operation.MoveTo(OperationStatus.WaitingForReceipt);
+        Validate(
+            operation.Status,
+            OperationStatus.WaitingForReceipt);
+
+        operation.SetProviderPaymentId(providerPaymentId);
+
+        operation.MoveTo(OperationStatus.WaitingForReceipt);
     }
 
 
-  
 
 
 
-  }
+
 }
+

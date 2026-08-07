@@ -14,7 +14,9 @@ public class AppDbContext : DbContext
 {
 
 
-  public DbSet<Operation> Operations => Set<Operation>(); public DbSet<OperationEvent> OperationEvents => Set<OperationEvent>();
+  public DbSet<Operation> Operations => Set<Operation>(); 
+  
+  public DbSet<OperationHistory> OperationHistories => Set<OperationHistory>();
 
   public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
 

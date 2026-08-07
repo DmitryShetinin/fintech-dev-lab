@@ -2,7 +2,7 @@ using Core.Enums;
 
 namespace Core.Models
 {
-  public class OperationEvent
+  public class OperationHistory
   {
     public long EventId { get; private set; }
 
@@ -18,12 +18,12 @@ namespace Core.Models
     public DateTime OccurredAt { get; private set; }
 
 
-    private OperationEvent()
+    private OperationHistory()
     {
     }
 
 
-    private OperationEvent(
+    private OperationHistory(
         string operationId,
         OperationStatus? fromStatus,
         OperationStatus toStatus,
@@ -39,13 +39,13 @@ namespace Core.Models
     }
 
 
-    public static OperationEvent Create(
+    public static OperationHistory Create(
         string operationId,
         OperationStatus? fromStatus,
         OperationStatus toStatus,
         string message)
     {
-      return new OperationEvent(
+      return new OperationHistory(
           operationId,
           fromStatus,
           toStatus,

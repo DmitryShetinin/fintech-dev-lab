@@ -27,11 +27,7 @@ public static class PersistenceExtensions
                 npgsql.CommandTimeout(
                     dbOptions.CommandTimeoutSeconds);
 
-                if (dbOptions.EnableRetryOnFailure)
-                {
-                    npgsql.EnableRetryOnFailure(
-                        maxRetryCount: dbOptions.MaxRetryCount);
-                }
+             
             });
     });
 
