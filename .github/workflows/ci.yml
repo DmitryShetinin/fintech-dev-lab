@@ -45,5 +45,8 @@ jobs:
       - name: Build
         run: dotnet build fintech-dev-lab.slnx --no-restore --configuration Release
 
+      - name: Apply migrations
+        run: dotnet ef database update --project src/Infrastructure --startup-project src/fintech-dev-lab
+
       - name: Test
         run: dotnet test src/Tests/IntegrationTests/IntegrationTests.csproj --no-build --configuration Release --logger "console;verbosity=detailed"
