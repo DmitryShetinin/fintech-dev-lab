@@ -33,8 +33,6 @@ public interface IOperationRepository
   Task<IReadOnlyList<OperationHistory>> GetEventsAsync(
       string operationId,
       CancellationToken cancellationToken);
-
-  Task<IReadOnlyList<Operation>> GetWaitingForReceiptAsync(
-      CancellationToken cancellationToken);
+ 
 }
 

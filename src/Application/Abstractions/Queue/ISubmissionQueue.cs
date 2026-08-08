@@ -15,4 +15,8 @@ public interface ISubmissionQueue
 
     IAsyncEnumerable<Operation> ReadAllAsync(
         CancellationToken cancellationToken);
+
+    ValueTask<Operation> DequeueAsync(
+CancellationToken cancellationToken);
+
 }

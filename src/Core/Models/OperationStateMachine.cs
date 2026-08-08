@@ -76,19 +76,7 @@ public class OperationStateMachine
         operation.MoveTo(OperationStatus.Processing);
     }
 
-    public void WaitForReceipt(
-        Operation operation,
-        string providerPaymentId)
-    {
-        Validate(
-            operation.Status,
-            OperationStatus.WaitingForReceipt);
-
-        operation.SetProviderPaymentId(providerPaymentId);
-
-        operation.MoveTo(OperationStatus.WaitingForReceipt);
-    }
-
+  
 
 
 

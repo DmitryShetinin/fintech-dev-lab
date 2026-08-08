@@ -1,74 +1,63 @@
-using Application.Abstractions.Persistence;
 using Application.Abstractions.Queue;
-using Application.Interface;
-using Core.Enums;
-using Core.Models;
+using Application.Abstractions.Submission;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-
 namespace Infrastructure.BackgroundServices;
-
 
 public sealed class SubmissionBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger _logger;
+    private readonly ISubmissionQueue _queue;
+    private readonly ILogger<SubmissionBackgroundService> _logger;
 
     public SubmissionBackgroundService(
         IServiceProvider serviceProvider,
-        ILogger logger
-        )
+        ISubmissionQueue queue,
+        ILogger<SubmissionBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
+        _queue = queue;
         _logger = logger;
     }
-
 
     protected override async Task ExecuteAsync(
         CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
-            using var scope =
-                _serviceProvider.CreateScope();
-
-
-    
-            var operationRepository =
-                scope.ServiceProvider
-                    .GetRequiredService<IOperationRepository>();
-
-
-            var queue =
-                scope.ServiceProvider
-                    .GetRequiredService<ISubmissionQueue>();
-
-
-
-            
-
-            var operations =
-                    await operationRepository.GetReadyForRetryAsync(token);
-
-            foreach(var operation in operations)
+            try
             {
-                
-                _logger.LogInformation(
-                "Retrying operation {OperationId}",
-                operation.Id);
+                var operation =
+                    await _queue.DequeueAsync(token);
 
-                await queue.EnqueueAsync(
+                using var scope =
+                    _serviceProvider.CreateScope();
+
+                var processor =
+                    scope.ServiceProvider
+                        .GetRequiredService<ISubmissionProcessor>();
+
+                _logger.LogInformation(
+                    "Processing submission for operation {OperationId}",
+                    operation.Id);
+
+                await processor.SubmitOperationAsync(
                     operation,
                     token);
             }
-
-
-
-            await Task.Delay(
-                TimeSpan.FromSeconds(5),
-                token);
+            catch (OperationCanceledException)
+                when (token.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error while processing submission");
+            }
         }
     }
 }

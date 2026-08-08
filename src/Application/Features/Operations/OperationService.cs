@@ -21,7 +21,7 @@ public class OperationService : IOperationService
     private readonly IOperationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly OperationStateMachine _stateMachine;
-     private readonly IOperationEventRepository _operationEventRepository;
+ 
 
     private readonly ISubmissionQueue _submissionQueue;
 
@@ -34,8 +34,7 @@ public class OperationService : IOperationService
         OperationStateMachine stateMachine,
         ISubmissionQueue submissionQueue,
         IOperationMetrics operationMetrics, 
-        ILogger<OperationService> logger,  
-        IOperationEventRepository operationEventRepository)
+        ILogger<OperationService> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
@@ -43,7 +42,7 @@ public class OperationService : IOperationService
         _submissionQueue = submissionQueue;
         _operationMetrics = operationMetrics; 
         _logger = logger;
-        _operationEventRepository = operationEventRepository; 
+     
     }
 
 
@@ -52,6 +51,26 @@ public class OperationService : IOperationService
     CreateOperationRequest request,
     CancellationToken cancellationToken)
     {
+Console.WriteLine(
+    $"CREATE: OperationId={request.OperationId}, Amount={request.Amount}, Currency={request.Currency}");
+            if (request.Amount <= 0)
+            {
+                    Console.WriteLine(">>> NEGATIVE AMOUNT VALIDATION HIT");
+                return Result<OperationResponse>.Failure(
+                     new ApplicationFailure("Amount must be greater than zero"));
+            }
+
+            if (!string.Equals(
+                    request.Currency,
+                    "RUB",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                
+                return Result<OperationResponse>.Failure(
+                      new ApplicationFailure(
+                    "Only RUB currency is supported"));
+            }
+
         var operation =
             Operation.Create(
                 request.OperationId,
@@ -87,7 +106,8 @@ public class OperationService : IOperationService
                 new ApplicationFailure(
                     "Database error"));
         }
-
+Console.WriteLine(
+    $"CREATE: OperationId={request.OperationId}, Amount={request.Amount}, Currency={request.Currency}");
         return Result<OperationResponse>.Success(
             operation.ToResponse());
     }

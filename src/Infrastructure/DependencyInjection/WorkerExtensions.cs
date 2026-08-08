@@ -1,6 +1,7 @@
 
 
 using Application.Abstractions.Queue;
+using Infrastructure.BackgroundServices;
 using Infrastructure.Configuration;
 using Infrastructure.Queue;
 using Microsoft.Extensions.Configuration;
@@ -20,14 +21,12 @@ public static class WorkerExtensions
         configuration.GetSection("Workers"));
 
     services.AddSingleton<ISubmissionQueue, SubmissionQueue>();
+ 
 
-
-    // services.AddHttpClient<IProviderClient, HttpProviderClient>();
-
-    //
-    // services.AddHostedService<SubmissionProducerWorker>();
-    //
-    // services.AddHostedService<SubmissionConsumerWorker>();
+    services.AddHostedService<SubmissionBackgroundService>();
+ 
+    services.AddHostedService<RetryBackgroundService>();
+ 
 
     return services;
   }

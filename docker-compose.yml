@@ -9,6 +9,8 @@ services:
       - "8080:8080"
 
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__Default: >
         Host=postgres;
         Port=5432;

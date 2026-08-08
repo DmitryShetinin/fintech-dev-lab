@@ -17,22 +17,19 @@ public class ReceiptsController : ControllerBase
 
 
   [HttpPost]
-  public async Task<IActionResult> Receive(
-    ReceiptRequest request,
+public async Task<IActionResult> Receive(
+    [FromBody] ReceiptRequest request,
     CancellationToken token)
-  {
-    var result =
-        await _receiptService.ProcessAsync(
-            request,
-            token);
-
+{
+    var result = await _receiptService.ProcessAsync(
+        request,
+        token);
 
     if (!result.IsSuccess)
     {
-      return Conflict(result.Error);
+        return Conflict(result.Error);
     }
 
-
     return NoContent();
-  }
+}
 }

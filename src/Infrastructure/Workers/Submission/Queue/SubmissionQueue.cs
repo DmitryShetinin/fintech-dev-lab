@@ -37,4 +37,11 @@ public sealed class SubmissionQueue : ISubmissionQueue
         return _channel.Reader.ReadAllAsync(
             cancellationToken);
     }
+
+        public ValueTask<Operation> DequeueAsync(
+        CancellationToken cancellationToken)
+    {
+        return _channel.Reader.ReadAsync(cancellationToken);
+    }
+    
 }

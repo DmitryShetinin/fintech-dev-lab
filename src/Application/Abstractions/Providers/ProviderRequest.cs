@@ -3,11 +3,9 @@ namespace Application.Provider;
 
 public sealed class ProviderRequest
 {
-  public string OperationId { get; init; } = null!;
+    public string OperationId { get; init; } = null!;
 
-  public decimal Amount { get; init; }
+    public string Amount { get; init; } = null!;
 
-  public string Currency { get; init; } = null!;
-
-  public string Description { get; init; } = null!;
+    public string Currency { get; init; } = null!;
 }

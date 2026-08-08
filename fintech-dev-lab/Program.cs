@@ -10,7 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddApplication()
-    .AddInfrastructure(builder.Configuration);
+    .AddInfrastructure(builder.Configuration)
+    .AddWorkers(builder.Configuration);
 
 
 builder.Services.AddControllers(); 
@@ -28,6 +29,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-
+app.MapPrometheusScrapingEndpoint();
 
 app.Run();

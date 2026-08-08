@@ -1,4 +1,6 @@
 
+using System.Text.Json.Serialization;
+
 namespace Application.Receipts.Requests;
 
 public sealed class ReceiptRequest
@@ -14,6 +16,7 @@ public sealed class ReceiptRequest
   public DateTime OccurredAt { get; init; }
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ReceiptResult
 {
   COMPLETED,

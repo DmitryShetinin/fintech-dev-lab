@@ -1,3 +1,4 @@
+using System.Globalization;
 using Application.Operations.Responses;
 using Application.Provider;
 using Core.Models;
@@ -39,12 +40,11 @@ public static class OperationMappingExtensions
   public static ProviderRequest ToProviderRequest(
       this Operation operation)
   {
-    return new ProviderRequest
+     return new ProviderRequest
     {
-      OperationId = operation.Id,
-      Amount = operation.Amount,
-      Currency = operation.Currency,
-      Description = operation.Description
+        OperationId = operation.Id,
+        Amount = operation.Amount.ToString("0.00", CultureInfo.InvariantCulture),
+        Currency = operation.Currency
     };
   }
 
