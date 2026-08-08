@@ -15,15 +15,20 @@ jobs:
       ASPNETCORE_ENVIRONMENT: Development
       DOTNET_ENVIRONMENT: Development
 
+      ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=payments;Username=postgres;Password=postgres"
+
     services:
       postgres:
         image: postgres:16
+
         env:
           POSTGRES_DB: payments
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+
         ports:
           - 5432:5432
+
         options: >-
           --health-cmd "pg_isready -U postgres -d payments"
           --health-interval 5s
@@ -38,6 +43,17 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Add dotnet tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Verify dotnet
+        run: |
+          dotnet --info
+          dotnet ef --version
 
       - name: Restore
         run: dotnet restore fintech-dev-lab.slnx
