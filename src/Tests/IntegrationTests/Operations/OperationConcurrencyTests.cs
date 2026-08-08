@@ -74,7 +74,7 @@ public async Task CreateOperation_DuplicateOperation_ShouldReturnBadRequest()
 
     secondResponse.StatusCode
         .Should()
-        .Be(HttpStatusCode.Conflict);
+        .Be(HttpStatusCode.BadRequest);
 }
 
 [Fact]

@@ -32,11 +32,6 @@ public class OperationsController : ControllerBase
 
     if (!result.IsSuccess)
     {
-      if (result.Error is OperationAlreadyExistsFailure)
-      {
-        return Conflict(result.Error);
-      }
-
       return BadRequest(result.Error);
     }
 

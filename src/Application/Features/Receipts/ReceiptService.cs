@@ -1,5 +1,4 @@
- 
- 
+using Application.Abstractions.Persistence;
 using Application.Abstractions.Telemetry;
 using Application.Common;
 using Application.Common.Failures;
@@ -36,31 +35,32 @@ public sealed class ReceiptService : IReceiptService
         ReceiptRequest request,
         CancellationToken cancellationToken)
     {
-        var operation =
-            await _operationRepository.GetByIdAsync(
-                request.OperationId,
-                cancellationToken);
+        var operation = await _operationRepository.GetByIdAsync(
+            request.OperationId,
+            cancellationToken);
 
         if (operation is null)
         {
             return Result<bool>.Failure(
                 new ApplicationFailure(
+                    FailureCode.NotFound,
                     $"Operation {request.OperationId} not found"));
         }
 
         // Повторная квитанция для уже завершённой операции.
-        if (operation.Status == OperationStatus.Completed ||
-            operation.Status == OperationStatus.Rejected)
+        if (operation.Status is
+            OperationStatus.Completed or
+            OperationStatus.Rejected)
         {
             _logger.LogInformation(
-                "Duplicate receipt ignored. Operation {OperationId}",
+                "Duplicate receipt ignored for operation {OperationId}",
                 operation.Id);
 
             return Result<bool>.Success(true);
         }
 
-        // Проверяем ProviderPaymentId ДО SetProviderPaymentId(),
-        // потому что Operation запрещает менять уже установленный ID.
+        // ProviderPaymentId уже установлен,
+        // поэтому callback должен содержать тот же ID.
         if (operation.ProviderPaymentId is not null &&
             operation.ProviderPaymentId != request.ProviderPaymentId)
         {
@@ -73,14 +73,13 @@ public sealed class ReceiptService : IReceiptService
 
             return Result<bool>.Failure(
                 new ApplicationFailure(
-                    "ProviderPaymentId mismatch."));
+                    FailureCode.Validation,
+                    "ProviderPaymentId mismatch"));
         }
 
         await _unitOfWork.ExecuteInTransactionAsync(
             ct =>
             {
-                // Если ID ещё не установлен — сохраняем его.
-                // Если уже установлен и совпадает — ничего не делаем.
                 if (operation.ProviderPaymentId is null)
                 {
                     operation.SetProviderPaymentId(
@@ -103,7 +102,7 @@ public sealed class ReceiptService : IReceiptService
                         throw new ArgumentOutOfRangeException(
                             nameof(request.Result),
                             request.Result,
-                            "Unknown receipt result.");
+                            "Unknown receipt result");
                 }
 
                 return Task.CompletedTask;
@@ -113,4 +112,3 @@ public sealed class ReceiptService : IReceiptService
         return Result<bool>.Success(true);
     }
 }
- 
