@@ -1,5 +1,17 @@
 namespace Application.Common.Failures;
 
-public sealed record ApplicationFailure(
+
+
+ 
+public enum FailureCode
+{
+    Validation,
+    Duplicate,
+    NotFound,
+    Conflict
+}
+
+public sealed record ApplicationFailure( 
+    FailureCode Code, 
     string Message)
     : IFailure;

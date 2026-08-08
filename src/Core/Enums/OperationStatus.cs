@@ -6,6 +6,6 @@ public enum OperationStatus
   Created,
   Processing,
   Completed,
-  Rejected,
-  WaitingForReceipt
+  Rejected 
+ 
 }

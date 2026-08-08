@@ -23,19 +23,17 @@ public class OperationsController : ControllerBase
 
   [HttpPost]
   public async Task<IActionResult> Create(
-      [FromBody] CreateOperationRequest request,
-      CancellationToken cancellationToken)
+    [FromBody] CreateOperationRequest request,
+    CancellationToken cancellationToken)
   {
     var result = await _operationService.CreateAsync(
         request,
         cancellationToken);
 
-
     if (!result.IsSuccess)
     {
       return BadRequest(result.Error);
     }
-
 
     return CreatedAtAction(
         nameof(GetById),

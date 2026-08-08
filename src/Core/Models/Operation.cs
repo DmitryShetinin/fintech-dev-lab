@@ -47,7 +47,7 @@ public class Operation
         Amount = amount;
         Currency = currency;
         Description = description;
-        ProviderPaymentId = provider.ToString();
+        ProviderPaymentId = null;
         Provider = provider;
         Status = OperationStatus.Created;
 
@@ -68,14 +68,14 @@ public class Operation
         string operationId,
         decimal amount,
         string currency,
-        string description, 
+        string description,
         PaymentProvider provider)
     {
         return new Operation(
             operationId,
             amount,
             currency,
-            description, 
+            description,
             provider);
     }
 
@@ -110,22 +110,22 @@ public class Operation
 
 
 
-    public void SetProviderPaymentId(
-        string providerPaymentId)
+    public void SetProviderPaymentId(string providerPaymentId)
     {
+        if (string.IsNullOrWhiteSpace(providerPaymentId))
+            throw new ArgumentException(
+                "Provider payment ID cannot be empty.",
+                nameof(providerPaymentId));
+
         if (ProviderPaymentId is null)
         {
             ProviderPaymentId = providerPaymentId;
-
             return;
         }
 
-
         if (ProviderPaymentId != providerPaymentId)
-        {
             throw new InvalidOperationException(
                 "ProviderPaymentId mismatch.");
-        }
     }
 
 

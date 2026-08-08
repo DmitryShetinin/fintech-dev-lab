@@ -46,15 +46,7 @@ public sealed class OperationRepository : IOperationRepository
 
 
 
-    public async Task<IReadOnlyList<Operation>> GetWaitingForReceiptAsync(
-       CancellationToken cancellationToken)
-    {
-        return await _dbContext.Operations
-            .Where(x =>
-                x.Status == OperationStatus.WaitingForReceipt)
-            .ToListAsync(cancellationToken);
-    }
-
+ 
 
     public Task UpdateAsync(
         Operation operation,

@@ -13,7 +13,7 @@ public static class DependencyInjection
        .AddPersistence(configuration)
        .AddWorkers(configuration)
        .AddTelemetry()
-       .AddProviders();
+       .AddProviders(configuration);
 
     return services;
 

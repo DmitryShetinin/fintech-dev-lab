@@ -54,7 +54,10 @@ public class SubmissionProcessor : ISubmissionProcessor
 
 
 
-
+_logger.LogInformation(
+    "Sending payment to provider. OperationId={OperationId}, Provider={Provider}",
+    operation.Id,
+    operation.Provider);
 
         var attempt = await CreateAttemptAsync(operation, token);
 
@@ -98,7 +101,7 @@ public class SubmissionProcessor : ISubmissionProcessor
             else
             {
                 var response = result.Value!.ProviderPaymentId!;
-                _stateMachine.WaitForReceipt(operation, response);
+                operation.SetProviderPaymentId(response);
                 attempt.MarkProviderAccepted(
                     response);
             }
