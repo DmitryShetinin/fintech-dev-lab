@@ -66,7 +66,8 @@ public sealed class OperationService : IOperationService
             request.OperationId,
             request.Amount,
             request.Currency,
-            request.Description);
+            request.Description,
+           PaymentProvider.YooKassa);
 
         try
         {
