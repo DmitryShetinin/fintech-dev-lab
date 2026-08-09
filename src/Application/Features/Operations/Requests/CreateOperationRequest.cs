@@ -11,5 +11,5 @@ public sealed class CreateOperationRequest
   public string Currency { get; init; } = default!;
 
   public string Description { get; init; } = default!;
-  public PaymentProvider Provider { get; set; }
+ 
 }

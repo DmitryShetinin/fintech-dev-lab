@@ -39,8 +39,7 @@ public class Operation
         string operationId,
         decimal amount,
         string currency,
-        string description,
-        PaymentProvider provider)
+        string description)
     {
         Id = operationId;
 
@@ -48,7 +47,6 @@ public class Operation
         Currency = currency;
         Description = description;
         ProviderPaymentId = null;
-        Provider = provider;
         Status = OperationStatus.Created;
 
 
@@ -68,15 +66,13 @@ public class Operation
         string operationId,
         decimal amount,
         string currency,
-        string description,
-        PaymentProvider provider)
+        string description)
     {
         return new Operation(
             operationId,
             amount,
             currency,
-            description,
-            provider);
+            description);
     }
 
     public OperationStatus Status { get; private set; }
