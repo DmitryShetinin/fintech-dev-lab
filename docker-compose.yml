@@ -19,6 +19,9 @@ services:
         Password=postgres
 
       PROVIDER_URL: http://provider-simulator:8081
+      
+      # Только для integration/recovery тестов
+      SUBMISSION_DELAY_MS: 10000
 
     depends_on:
       postgres:

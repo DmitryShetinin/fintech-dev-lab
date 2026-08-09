@@ -2,10 +2,12 @@ using Application.Abstractions.Persistence;
 using Application.Abstractions.Providers;
 using Application.Abstractions.Retry;
 using Application.Abstractions.Telemetry;
+using Application.Common;
 using Application.Common.Failures;
 using Application.Extensions;
 using Application.Interface;
 using Application.Provider;
+using Core.Enums;
 using Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -72,13 +74,39 @@ _logger.LogInformation(
         token);
 
 
+        Result<ProviderResponse> result;
 
 
-
-        var result =
-            await provider.CreatePaymentAsync(
+        try
+        {
+            result = await provider.CreatePaymentAsync(
                 operation.ToProviderRequest(),
                 token);
+        }
+        catch (TaskCanceledException) when (!token.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                "Provider request timed out. OperationId={OperationId}",
+                operation.Id);
+
+            var failure = new ProviderFailure(
+                ProviderFailureReason.Timeout,
+                "Provider request timed out.");
+
+            await _unitOfWork.ExecuteInTransactionAsync(
+                async ct =>
+                {
+                    HandleFailure(
+                        attempt,
+                        failure,
+                        operation);
+
+                    await Task.CompletedTask;
+                },
+                token);
+
+            return;
+        }
 
 
 
