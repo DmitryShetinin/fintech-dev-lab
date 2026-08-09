@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Core.Enums;
 
 namespace Application.Operations.Requests;
@@ -11,5 +12,7 @@ public sealed class CreateOperationRequest
   public string Currency { get; init; } = default!;
 
   public string Description { get; init; } = default!;
-  public PaymentProvider Provider { get; set; }
+
+  [JsonIgnore] 
+  public  PaymentProvider Provider  = PaymentProvider.YooKassa;
 }

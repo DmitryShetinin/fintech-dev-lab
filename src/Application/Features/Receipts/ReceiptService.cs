@@ -76,13 +76,8 @@ public sealed class ReceiptService : IReceiptService
                     FailureCode.Validation,
                     "ProviderPaymentId mismatch"));
         }
-        _logger.LogWarning(
-    "TEST: Delaying receipt response for 40 seconds. OperationId={OperationId}",
-    request.OperationId);
-
-        await Task.Delay(
-            TimeSpan.FromSeconds(40),
-            cancellationToken);
+      
+         
         await _unitOfWork.ExecuteInTransactionAsync(
             ct =>
             {
