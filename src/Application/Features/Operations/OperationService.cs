@@ -66,8 +66,7 @@ public sealed class OperationService : IOperationService
             request.OperationId,
             request.Amount,
             request.Currency,
-            request.Description,
-            request.Provider);
+            request.Description);
 
         try
         {
