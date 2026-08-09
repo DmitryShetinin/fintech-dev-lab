@@ -46,7 +46,7 @@ public sealed class OperationRepository : IOperationRepository
 
 
 
- 
+
 
     public Task UpdateAsync(
         Operation operation,
@@ -99,4 +99,16 @@ public sealed class OperationRepository : IOperationRepository
                 x.NextRetryAt <= DateTime.UtcNow)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Operation>> GetProcessingOperationsAsync(
+    CancellationToken cancellationToken)
+    {
+        return await _dbContext.Operations
+            .AsNoTracking()
+            .Where(x =>
+                x.Status == OperationStatus.Processing &&
+                x.NextRetryAt == null)
+            .ToListAsync(cancellationToken);
+    }
+
 }

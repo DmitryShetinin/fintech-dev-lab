@@ -1,6 +1,5 @@
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Queue;
-using Application.Abstractions.Submission;
 using Application.Interface;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,6 +12,9 @@ public sealed class RetryBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RetryBackgroundService> _logger;
 
+    private static readonly TimeSpan RetryCheckInterval =
+        TimeSpan.FromSeconds(5);
+
     public RetryBackgroundService(
         IServiceProvider serviceProvider,
         ILogger<RetryBackgroundService> logger)
@@ -24,35 +26,21 @@ public sealed class RetryBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(
         CancellationToken token)
     {
+        _logger.LogInformation(
+            "Retry background service started");
+
+        // Сначала пытаемся восстановить незавершённые операции.
+        await RecoverProcessingOperationsAsync(token);
+
         while (!token.IsCancellationRequested)
         {
             try
             {
-                using var scope =
-                    _serviceProvider.CreateScope();
+                await Task.Delay(
+                    RetryCheckInterval,
+                    token);
 
-                var operationRepository =
-                    scope.ServiceProvider
-                        .GetRequiredService<IOperationRepository>();
-
-                var submissionQueue =
-                    scope.ServiceProvider
-                        .GetRequiredService<ISubmissionQueue>();
-
-                var operations =
-                    await operationRepository
-                        .GetReadyForRetryAsync(token);
-
-                foreach (var operation in operations)
-                {
-                    await submissionQueue.EnqueueAsync(
-                        operation,
-                        token);
-
-                    _logger.LogInformation(
-                        "Operation {OperationId} scheduled for retry",
-                        operation.Id);
-                }
+                await ProcessReadyRetriesAsync(token);
             }
             catch (OperationCanceledException)
                 when (token.IsCancellationRequested)
@@ -65,10 +53,70 @@ public sealed class RetryBackgroundService : BackgroundService
                     ex,
                     "Error while processing operation retries");
             }
+        }
 
-            await Task.Delay(
-                TimeSpan.FromSeconds(5),
+        _logger.LogInformation(
+            "Retry background service stopped");
+    }
+
+    private async Task ProcessReadyRetriesAsync(
+        CancellationToken token)
+    {
+        using var scope =
+            _serviceProvider.CreateScope();
+
+        var operationRepository =
+            scope.ServiceProvider
+                .GetRequiredService<IOperationRepository>();
+
+        var submissionQueue =
+            scope.ServiceProvider
+                .GetRequiredService<ISubmissionQueue>();
+
+        var operations =
+            await operationRepository
+                .GetReadyForRetryAsync(token);
+
+        foreach (var operation in operations)
+        {
+            await submissionQueue.EnqueueAsync(
+                operation,
                 token);
+
+            _logger.LogInformation(
+                "Operation {OperationId} scheduled for retry",
+                operation.Id);
         }
     }
+
+    private async Task RecoverProcessingOperationsAsync(
+    CancellationToken token)
+    {
+        using var scope =
+            _serviceProvider.CreateScope();
+
+        var operationRepository =
+            scope.ServiceProvider
+                .GetRequiredService<IOperationRepository>();
+
+        var submissionQueue =
+            scope.ServiceProvider
+                .GetRequiredService<ISubmissionQueue>();
+
+        var operations =
+            await operationRepository
+                .GetProcessingOperationsAsync(token);
+
+        foreach (var operation in operations)
+        {
+            await submissionQueue.EnqueueAsync(
+                operation,
+                token);
+
+            _logger.LogInformation(
+                "Recovered processing operation {OperationId}",
+                operation.Id);
+        }
+    }
+
 }

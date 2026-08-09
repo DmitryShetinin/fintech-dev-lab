@@ -20,6 +20,8 @@ namespace Infrastructure.DependencyInjection
       {
           client.BaseAddress =
               new Uri(configuration["PROVIDER_URL"]!);
+
+          client.Timeout = TimeSpan.FromSeconds(30);
       });
       return services;
     }

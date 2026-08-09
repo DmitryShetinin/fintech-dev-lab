@@ -33,6 +33,9 @@ public interface IOperationRepository
   Task<IReadOnlyList<OperationHistory>> GetEventsAsync(
       string operationId,
       CancellationToken cancellationToken);
+
+
+    Task<IReadOnlyList<Operation>> GetProcessingOperationsAsync(CancellationToken cancellationToken);
  
 }
 

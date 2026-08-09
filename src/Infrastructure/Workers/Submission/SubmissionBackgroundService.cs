@@ -1,5 +1,6 @@
 using Application.Abstractions.Queue;
 using Application.Abstractions.Submission;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -11,15 +12,19 @@ public sealed class SubmissionBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ISubmissionQueue _queue;
     private readonly ILogger<SubmissionBackgroundService> _logger;
+    private readonly int _submissionDelayMs;
 
     public SubmissionBackgroundService(
         IServiceProvider serviceProvider,
         ISubmissionQueue queue,
-        ILogger<SubmissionBackgroundService> logger)
+        ILogger<SubmissionBackgroundService> logger,
+        IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _queue = queue;
         _logger = logger;
+
+        _submissionDelayMs = 1;
     }
 
     protected override async Task ExecuteAsync(
@@ -42,6 +47,17 @@ public sealed class SubmissionBackgroundService : BackgroundService
                 _logger.LogInformation(
                     "Processing submission for operation {OperationId}",
                     operation.Id);
+                
+                if (_submissionDelayMs > 0)
+                {
+                    _logger.LogInformation(
+                        "Test delay before submission: {DelayMs}ms",
+                        _submissionDelayMs);
+
+                    await Task.Delay(
+                        _submissionDelayMs,
+                        token);
+                }
 
                 await processor.SubmitOperationAsync(
                     operation,
