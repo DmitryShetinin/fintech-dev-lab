@@ -95,11 +95,15 @@ public class Operation
         RetryCount++;
 
         NextRetryAt = DateTime.UtcNow.Add(delay);
+
+            Console.WriteLine(
+        $"RETRY SCHEDULED: RetryCount={RetryCount}, NextRetryAt={NextRetryAt:O}");
+
     }
 
     public void ResetRetry()
     {
-        RetryCount = 0;
+  
         NextRetryAt = null;
     }
 

@@ -6,13 +6,13 @@ namespace Infrastructure.Queue;
 
 public sealed class SubmissionQueue : ISubmissionQueue
 {
-    private readonly Channel<Operation> _channel;
+    private readonly Channel<string> _channel;
 
 
     public SubmissionQueue()
     {
         _channel =
-            Channel.CreateUnbounded<Operation>(
+            Channel.CreateUnbounded<string>(
                 new UnboundedChannelOptions
                 {
                     SingleReader = true,
@@ -22,7 +22,7 @@ public sealed class SubmissionQueue : ISubmissionQueue
 
 
     public ValueTask EnqueueAsync(
-        Operation operation,
+        string operation,
         CancellationToken cancellationToken)
     {
         return _channel.Writer.WriteAsync(
@@ -31,14 +31,14 @@ public sealed class SubmissionQueue : ISubmissionQueue
     }
 
 
-    public IAsyncEnumerable<Operation> ReadAllAsync(
+    public IAsyncEnumerable<string> ReadAllAsync(
         CancellationToken cancellationToken)
     {
         return _channel.Reader.ReadAllAsync(
             cancellationToken);
     }
 
-        public ValueTask<Operation> DequeueAsync(
+        public ValueTask<string> DequeueAsync(
         CancellationToken cancellationToken)
     {
         return _channel.Reader.ReadAsync(cancellationToken);

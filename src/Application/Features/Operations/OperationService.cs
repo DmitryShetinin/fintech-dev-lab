@@ -130,7 +130,7 @@ public sealed class OperationService : IOperationService
                 _stateMachine.StartProcessing(operation);
 
                 await _submissionQueue.EnqueueAsync(
-                    operation,
+                    operation.Id,
                     ct);
 
                 return operation.ToResponse();

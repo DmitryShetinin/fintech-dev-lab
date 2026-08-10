@@ -1,3 +1,4 @@
+ 
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Queue;
 using Application.Interface;
@@ -26,10 +27,6 @@ public sealed class RetryBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(
         CancellationToken token)
     {
-        _logger.LogInformation(
-            "Retry background service started");
-
-        // Сначала пытаемся восстановить незавершённые операции.
         await RecoverProcessingOperationsAsync(token);
 
         while (!token.IsCancellationRequested)
@@ -54,9 +51,6 @@ public sealed class RetryBackgroundService : BackgroundService
                     "Error while processing operation retries");
             }
         }
-
-        _logger.LogInformation(
-            "Retry background service stopped");
     }
 
     private async Task ProcessReadyRetriesAsync(
@@ -80,17 +74,13 @@ public sealed class RetryBackgroundService : BackgroundService
         foreach (var operation in operations)
         {
             await submissionQueue.EnqueueAsync(
-                operation,
+                operation.Id,
                 token);
-
-            _logger.LogInformation(
-                "Operation {OperationId} scheduled for retry",
-                operation.Id);
         }
     }
 
     private async Task RecoverProcessingOperationsAsync(
-    CancellationToken token)
+        CancellationToken token)
     {
         using var scope =
             _serviceProvider.CreateScope();
@@ -110,13 +100,9 @@ public sealed class RetryBackgroundService : BackgroundService
         foreach (var operation in operations)
         {
             await submissionQueue.EnqueueAsync(
-                operation,
+                operation.Id,
                 token);
-
-            _logger.LogInformation(
-                "Recovered processing operation {OperationId}",
-                operation.Id);
         }
     }
-
 }
+ 

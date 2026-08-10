@@ -9,14 +9,14 @@ namespace Application.Abstractions.Queue;
 public interface ISubmissionQueue
 {
     ValueTask EnqueueAsync(
-        Operation operation,
+        string operation,
         CancellationToken cancellationToken);
 
 
-    IAsyncEnumerable<Operation> ReadAllAsync(
+    IAsyncEnumerable<string> ReadAllAsync(
         CancellationToken cancellationToken);
 
-    ValueTask<Operation> DequeueAsync(
+    ValueTask<string> DequeueAsync(
 CancellationToken cancellationToken);
 
 }
