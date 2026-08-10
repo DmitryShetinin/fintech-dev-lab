@@ -92,11 +92,11 @@ public sealed class OperationRepository : IOperationRepository
     CancellationToken cancellationToken)
     {
         return await _dbContext.Operations
-            .AsNoTracking()
             .Where(x =>
                 x.Status == OperationStatus.Processing &&
                 x.NextRetryAt != null &&
-                x.NextRetryAt <= DateTime.UtcNow)
+                x.NextRetryAt <= DateTime.UtcNow &&
+                x.RetryCount <= 5)
             .ToListAsync(cancellationToken);
     }
 

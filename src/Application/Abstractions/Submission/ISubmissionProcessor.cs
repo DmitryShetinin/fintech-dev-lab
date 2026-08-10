@@ -7,7 +7,7 @@ public interface ISubmissionProcessor
 
 
   Task SubmitOperationAsync(
-      Operation operation,
+      string operation,
       CancellationToken token);
 
 

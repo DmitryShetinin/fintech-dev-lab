@@ -1,3 +1,4 @@
+ 
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Providers;
 using Application.Abstractions.Retry;
@@ -11,154 +12,175 @@ using Core.Enums;
 using Core.Models;
 using Microsoft.Extensions.Logging;
 
-
 namespace Application.Abstractions.Submission;
 
-
-public class SubmissionProcessor : ISubmissionProcessor
+public sealed class SubmissionProcessor : ISubmissionProcessor
 {
+    private readonly IOperationRepository _operationRepository;
     private readonly IPaymentAttemptRepository _paymentAttemptRepository;
     private readonly IProviderClientFactory _providerFactory;
     private readonly IRetryPolicy _retryPolicy;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly OperationStateMachine _stateMachine;
     private readonly ILogger<SubmissionProcessor> _logger;
     private readonly IOperationMetrics _operationMetrics;
+    private readonly OperationStateMachine _stateMachine;
 
     public SubmissionProcessor(
-        IPaymentAttemptRepository attemptRepository,
+        IOperationRepository operationRepository,
+        IPaymentAttemptRepository paymentAttemptRepository,
         IProviderClientFactory providerFactory,
         IRetryPolicy retryPolicy,
         IUnitOfWork unitOfWork,
-        OperationStateMachine stateMachine,
-        ILogger<SubmissionProcessor> logger, 
-        IOperationMetrics operationMetrics)
+        ILogger<SubmissionProcessor> logger,
+        IOperationMetrics operationMetrics,
+        OperationStateMachine stateMachine)
     {
-        _paymentAttemptRepository = attemptRepository;
+        _operationRepository = operationRepository;
+        _paymentAttemptRepository = paymentAttemptRepository;
         _providerFactory = providerFactory;
         _retryPolicy = retryPolicy;
         _unitOfWork = unitOfWork;
-        _stateMachine = stateMachine;
         _logger = logger;
         _operationMetrics = operationMetrics;
+        _stateMachine = stateMachine;
     }
 
-
-
-
     public async Task SubmitOperationAsync(
-        Operation operation,
+        string operationId,
         CancellationToken token)
     {
+        var operation =
+            await _operationRepository.GetByIdAsync(
+                operationId,
+                token);
+
+        if (operation is null)
+        {
+            _logger.LogError(
+                "Operation {OperationId} not found",
+                operationId);
+
+            return;
+        }
+
         var provider =
             _providerFactory.Get(operation.Provider);
 
-
-
-
-_logger.LogInformation(
-    "Sending payment to provider. OperationId={OperationId}, Provider={Provider}",
-    operation.Id,
-    operation.Provider);
-
-        var attempt = await CreateAttemptAsync(operation, token);
-
+        var attempt =
+            await CreateAttemptAsync(
+                operation,
+                token);
 
         await _unitOfWork.ExecuteInTransactionAsync(
-        async ct =>
-        {
-            await _paymentAttemptRepository.AddAsync(
-                attempt,
-                ct);
-        },
-        token);
+            async ct =>
+            {
+                await _paymentAttemptRepository.AddAsync(
+                    attempt,
+                    ct);
+            },
+            token);
 
+        ProviderFailure? failure = null;
+        ProviderResponse? response = null;
 
-        Result<ProviderResponse> result;
+        using var timeoutCts =
+            CancellationTokenSource.CreateLinkedTokenSource(token);
 
+        timeoutCts.CancelAfter(
+            TimeSpan.FromSeconds(10));
 
         try
         {
-            result = await provider.CreatePaymentAsync(
-                operation.ToProviderRequest(),
-                token);
+            _logger.LogInformation(
+                "Sending payment to provider. OperationId={OperationId}, Provider={Provider}",
+                operation.Id,
+                operation.Provider);
+
+            var result =
+                await provider.CreatePaymentAsync(
+                    operation.ToProviderRequest(),
+                    timeoutCts.Token);
+
+            if (!result.IsSuccess)
+            {
+                failure =
+                    result.GetError<ProviderFailure>();
+
+                if (failure is null)
+                {
+                    throw new InvalidOperationException(
+                        "Provider returned failure but error object is missing.");
+                }
+            }
+            else
+            {
+                response = result.Value;
+            }
         }
-        catch (TaskCanceledException) when (!token.IsCancellationRequested)
+        catch (TaskCanceledException)
+            when (!token.IsCancellationRequested)
+        {
+            failure =
+                new ProviderFailure(
+                    ProviderFailureReason.Timeout,
+                    "Provider request timed out.");
+        }
+        catch (HttpRequestException ex)
         {
             _logger.LogWarning(
-                "Provider request timed out. OperationId={OperationId}",
+                ex,
+                "Provider network request failed. OperationId={OperationId}",
                 operation.Id);
 
-            var failure = new ProviderFailure(
-                ProviderFailureReason.Timeout,
-                "Provider request timed out.");
+            failure =
+                new ProviderFailure(
+                    ProviderFailureReason.Network,
+                    "Provider network request failed.");
+        }
 
-            await _unitOfWork.ExecuteInTransactionAsync(
-                async ct =>
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async ct =>
+            {
+                if (failure is not null)
                 {
                     HandleFailure(
                         attempt,
                         failure,
                         operation);
 
-                    await Task.CompletedTask;
-                },
-                token);
+                    return;
+                }
 
-            return;
-        }
+                if (response is null)
+                {
+                    throw new InvalidOperationException(
+                        "Provider returned neither success response nor failure.");
+                }
 
+                operation.SetProviderPaymentId(
+                    response.ProviderPaymentId!);
 
-
-        await _unitOfWork.ExecuteInTransactionAsync(
-        async ct =>
-        {
-            if (!result.IsSuccess)
-            {
-                var failure =
-              result.GetError<ProviderFailure>();
-
-                if (failure is null)
-                    throw new InvalidOperationException("Provider returned failure but error object is missing.");
-
-                HandleFailure(
-                    attempt,
-                    failure,
-                    operation);
-            }
-            else
-            {
-                var response = result.Value!.ProviderPaymentId!;
-                operation.SetProviderPaymentId(response);
                 attempt.MarkProviderAccepted(
-                    response);
-            }
-        },
-        token);
-
-
-
-
+                    response.ProviderPaymentId!);
+            },
+            token);
     }
 
-
-
-    private async Task<PaymentAttempt> CreateAttemptAsync(Operation operation, CancellationToken token)
+    private async Task<PaymentAttempt> CreateAttemptAsync(
+        Operation operation,
+        CancellationToken token)
     {
-
         var attemptNumber =
-            await _paymentAttemptRepository.GetNextAttemptNumberAsync(
-                operation.Id,
-                PaymentAttemptType.ReceiptPolling,
-                token);
+            await _paymentAttemptRepository
+                .GetNextAttemptNumberAsync(
+                    operation.Id,
+                    PaymentAttemptType.ReceiptPolling,
+                    token);
 
-        var attempt =
-            PaymentAttempt.Start(
-                operation.Id,
-                attemptNumber,
-                PaymentAttemptType.ReceiptPolling);
-
-        return attempt;
+        return PaymentAttempt.Start(
+            operation.Id,
+            attemptNumber,
+            PaymentAttemptType.ReceiptPolling);
     }
 
     private void HandleFailure(
@@ -170,49 +192,34 @@ _logger.LogInformation(
             failure.Reason,
             failure.Message);
 
-
-
         if (!_retryPolicy.CanRetry(
-            failure.Reason,
-            attempt.AttemptNumber))
+                failure.Reason,
+                operation.RetryCount))
         {
-
+            _stateMachine.Reject(operation);
 
             _logger.LogError(
                 "Submission failed permanently. Operation {OperationId}. Reason {Reason}",
-                attempt.OperationId,
+                operation.Id,
                 failure.Reason);
-
 
             return;
         }
 
-
-
         var delay =
             _retryPolicy.GetRetryDelay(
-                attempt.AttemptNumber);
+                operation.RetryCount);
 
+        operation.ScheduleRetry(
+            delay);
 
-
-        operation.ScheduleRetry(delay);
         _operationMetrics.AddRetryOccurred();
-
-
-
-
-
 
         _logger.LogWarning(
             "Submission failed. Operation {OperationId}. Reason {Reason}. Retry after {Delay}",
-            attempt.OperationId,
+            operation.Id,
             failure.Reason,
             delay);
     }
-
-
-
-
-
-
 }
+ 

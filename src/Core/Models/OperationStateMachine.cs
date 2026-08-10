@@ -65,6 +65,7 @@ public class OperationStateMachine
             OperationStatus.Rejected);
 
         operation.MoveTo(OperationStatus.Rejected);
+        operation.ResetRetry();
     }
 
     public void StartProcessing(Operation operation)

@@ -42,7 +42,7 @@ public sealed class SubmissionWorker : BackgroundService
     private async Task ConsumeAsync(
         CancellationToken token)
     {
-        await foreach(var operation in _queue.ReadAllAsync(token))
+        await foreach(var operationId in _queue.ReadAllAsync(token))
         {
             using var scope =
                 _serviceProvider.CreateScope();
@@ -54,7 +54,7 @@ public sealed class SubmissionWorker : BackgroundService
 
 
             await processor.SubmitOperationAsync(
-                operation,
+                operationId,
                 token);
         }
     }
