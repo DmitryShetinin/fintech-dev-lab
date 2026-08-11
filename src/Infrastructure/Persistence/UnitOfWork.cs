@@ -159,16 +159,7 @@ public sealed class UnitOfWork : IUnitOfWork
     private async Task SaveChangesAsync(
         CancellationToken cancellationToken)
     {
-        var operations = _dbContext.ChangeTracker
-        .Entries<Operation>()
-        .Select(x => new
-        {
-            x.Entity.Id,
-            State = x.State,
-            RetryCount = x.Entity.RetryCount,
-            NextRetryAt = x.Entity.NextRetryAt
-        })
-        .ToList();
+    
 
         await _dbContext.SaveChangesAsync(
             cancellationToken);
